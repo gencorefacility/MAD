@@ -73,51 +73,51 @@ bw = {
 
 snp_cov = {
 	"category": category,
-	"key": sample_id + "-snpcoverage",
-	"label": sample_id + "-snpcoverage",
+	"key": sample_id + "-snpcoverage-freebayes",
+	"label": sample_id + "-snpcoverage-freebayes",
 	"storeClass": "MPileupPlugin/Store/SeqFeature/BigWigVcfAdDp",
 	"type": "MPileupPlugin/View/Track/SNPCoverage",
 	"bigwig": {
 		"storeClass": "JBrowse/Store/SeqFeature/BigWig",
-		"urlTemplate": "tracks/samples/{}/{}/{}-hc_bamout_coverage.bam.bw".format(fcid, category, sample_id)
+		"urlTemplate": "tracks/samples/{}/{}/{}_coverage.bam.bw".format(fcid, category, sample_id)
 	},
 	"vcf": {
 		"storeClass": "JBrowse/Store/SeqFeature/VCFTabix",
-		"urlTemplate": "tracks/samples/{}/{}/{}_filtered_snps.ann.vcf.gz".format(fcid, category, sample_id)
+		"urlTemplate": "tracks/samples/{}/{}/{}_freebayes.vcf.gz".format(fcid, category, sample_id)
 	}
 }
 
-pilon_snps = {
+ivar_snps = {
         "category": category,
-        "key": sample_id + "-pilon",
-        "label": sample_id + "-pilon",
+        "key": sample_id + "-ivar",
+        "label": sample_id + "-ivar",
         "storeClass": "JBrowse/Store/SeqFeature/VCFTabix",
         "type": "CanvasFeatures",
-        "urlTemplate": "tracks/samples/{}/{}/{}_pilon.vcf.gz".format(fcid, category, sample_id),
+        "urlTemplate": "tracks/samples/{}/{}/{}_ivar.vcf.gz".format(fcid, category, sample_id),
 	"style": {
 		"color": "{variantColor}"
 	}
 }
 
-cons_snps = {
+timo_snps = {
         "category": category,
-        "key": sample_id + "-consensus-snps",
-        "label": sample_id + "-consensus-snps",
+        "key": sample_id + "-timo-snps",
+        "label": sample_id + "-timo-snps",
         "storeClass": "JBrowse/Store/SeqFeature/VCFTabix",
         "type": "CanvasFeatures",
-        "urlTemplate": "tracks/samples/{}/{}/{}_consensus_snps.vcf.gz".format(fcid, category, sample_id),
+        "urlTemplate": "tracks/samples/{}/{}/{}_tims.vcf.gz".format(fcid, category, sample_id),
 	"style": {
 		"color": "{variantColor}"
 	}
 }
 
-bcftools_snps = {
+hc_snps = {
         "category": category,
-        "key": sample_id + "-bcftools-snps",
-        "label": sample_id + "-bcftools-snps",
+        "key": sample_id + "-hc-snps",
+        "label": sample_id + "-hc-snps",
         "storeClass": "JBrowse/Store/SeqFeature/VCFTabix",
         "type": "CanvasFeatures",
-        "urlTemplate": "tracks/samples/{}/{}/{}_bcftools.vcf.gz".format(fcid, category, sample_id),
+        "urlTemplate": "tracks/samples/{}/{}/{}_filtered_snps.vcf.gz".format(fcid, category, sample_id),
         "style": {
                 "color": "{variantColor}"
         }
@@ -135,13 +135,37 @@ mutect2_snps = {
         }
 }
 
-freebayes_snps = {
+freebayes_default_snps = {
         "category": category,
-        "key": sample_id + "-freebayes-snps",
-        "label": sample_id + "-freebayes-snps",
+        "key": sample_id + "-freebayes-default-snps",
+        "label": sample_id + "-freebayes-default-snps",
         "storeClass": "JBrowse/Store/SeqFeature/VCFTabix",
         "type": "CanvasFeatures",
-        "urlTemplate": "tracks/samples/{}/{}/{}_freebayes.vcf.gz".format(fcid, category, sample_id),
+        "urlTemplate": "tracks/samples/{}/{}/{}_freebayes_default.vcf.gz".format(fcid, category, sample_id),
+        "style": {
+                "color": "{variantColor}"
+        }
+}
+
+varscan_snps = {
+        "category": category,
+        "key": sample_id + "-varscan-snps",
+        "label": sample_id + "-varscan-snps",
+        "storeClass": "JBrowse/Store/SeqFeature/VCFTabix",
+        "type": "CanvasFeatures",
+        "urlTemplate": "tracks/samples/{}/{}/{}_varscan.vcf.gz".format(fcid, category, sample_id),
+        "style": {
+                "color": "{variantColor}"
+        }
+}
+
+golden_snps = {
+        "category": category,
+        "key": sample_id + "-golden-snps",
+        "label": sample_id + "-golden-snps",
+        "storeClass": "JBrowse/Store/SeqFeature/VCFTabix",
+        "type": "CanvasFeatures",
+        "urlTemplate": "tracks/samples/{}/{}/{}_golden.vcf.gz".format(fcid, category, sample_id),
         "style": {
                 "color": "{variantColor}"
         }
@@ -156,13 +180,14 @@ tracks = data['tracks']
 if not in_arg.bw:
 	tracks.append(bam)
 	tracks.append(snps)
-	tracks.append(indels)
-	tracks.append(pilon_snps)
-	tracks.append(cons_snps)
+	tracks.append(ivar_snps)
+	tracks.append(timo_snps)
 	tracks.append(snp_cov)
-	tracks.append(bcftools_snps)
+	#tracks.append(hc_snps)
 	tracks.append(mutect2_snps)
-	tracks.append(freebayes_snps)
+	tracks.append(freebayes_default_snps)
+	tracks.append(varscan_snps)
+	tracks.append(golden_snps)
 tracks.append(bw)
 
 with open(new_trackList, 'w') as f: 
