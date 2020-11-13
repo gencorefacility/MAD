@@ -22,11 +22,26 @@ RUN yum -y install \
 	curl-devel \
 	openssl-devel \
 	ncurses-devel \
-	graphviz
+	graphviz \
+	gsl-devel \ 
+	perl-ExtUtils-Embed \
+	cmake
 
 
 ENV APPS_ROOT /apps
 RUN mkdir -p ${APPS_ROOT}
+
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
+	&& bash ~/miniconda.sh -b -p $HOME/miniconda \
+	&& eval "$(~/miniconda/bin/conda shell.bash hook)" \
+	&& conda init \
+	&& conda config --add channels defaults \
+  && conda config --add channels bioconda \
+  && conda config --add channels conda-forge \
+	&& conda install python=2.7 \
+	&& conda install freebayes ivar varscan biopython pysam deeptools
+
+##RUN conda install -c bioconda freebayes seqtk biopython varscan ivar bcftools pilon trimmomatic snpeff==4.3 samtools==1.9 bwa==0.7.17#conda install -c bioconda freebayes seqtk biopython varscan ivar bcftools pilon trimmomatic snpeff==4.3 samtools==1.9 bwa==0.7.17
 
 ###############################################
 #BWA = 'bwa/intel/0.7.17'
@@ -144,17 +159,16 @@ ENV TRIMMOMATIC_VERSION 0.36
 ENV TRIMMOMATIC_HOME ${APPS_ROOT}/trimmomatic/${TRIMMOMATIC_VERSION}
 ENV TRIMMOMATIC_JAR ${TRIMMOMATIC_HOME}/trimmomatic-${TRIMMOMATIC_VERSION}.jar
 
-RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-${TRIMMOMATIC_VERSION}.zip \
+RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-${TRIMMOMATIC_VERSION}.zip \
 	&& unzip Trimmomatic-${TRIMMOMATIC_VERSION}.zip \
 	&& mkdir -p ${APPS_ROOT}/trimmomatic \
-	&& mv Trimmomatic-${TRIMMOMATIC_VERSION} ${TRIMMOMATIC_HOME} \
-	&& rm Trimmomatic-${TRIMMOMATIC_VERSION}.zip
-			
+	&& mv Trimmomatic-${TRIMMOMATIC_VERSION} ${TRIMMOMATIC_HOME}s 
+	
 ###############################################
 #PYPAIRIX = 'pypairix/intel/0.2.4'
 
 ENV PAIRIX_VERSION 0.2.4
-ENV PAIRIX_HOME ${APPS_ROOT/pairix/${PAIRIX_VERSION}
+ENV PAIRIX_HOME ${APPS_ROOT}/pairix/${PAIRIX_VERSION}
 ENV PATH ${PAIRIX_HOME}/bin:${PAIRIX_HOME}/util:${PAIRIX_HOME}/util/bam2pairs:${PATH}
 
 RUN git clone https://github.com/4dn-dcic/pairix --branch ${PAIRIX_VERSION} ${PAIRIX_HOME} \
@@ -171,7 +185,7 @@ RUN git clone https://github.com/4dn-dcic/pairix --branch ${PAIRIX_VERSION} ${PA
 ENV JVARKIT_HOME ${APPS_ROOT}/jvarkit
 ENV JVARKIT_DIST ${JVARKIT_HOME}/dist
 
-RUN git clone "https://github.com/lindenb/jvarkit.git"
+RUN git clone "https://github.com/lindenb/jvarkit.git" ${JVARKIT_HOME}
 
 RUN $JVARKIT_HOME/gradlew --project-dir $JVARKIT_HOME sortsamrefname
 ENV SORTSAMREFNAME_JAR ${JVARKIT_DIST}/sortsamrefname.jar
@@ -195,12 +209,56 @@ RUN mkdir -p ${PILON_HOME} \
  && wget https://github.com/broadinstitute/pilon/releases/download/v${PILON_VERSION}/pilon-${PILON_VERSION}.jar -O ${PILON_HOME}/pilon.jar
 
 ###############################################
-
 #BCFTOOLS = 'bcftools/intel/1.9'
+
+ENV BCFTOOLS_VERSION 1.9
+ENV BCFTOOLS_HOME ${APPS_ROOT}/bcftools/${BCFTOOLS_VERSION}
+ENV BCFTOOLS_PLUGINS ${BCFTOOLS_HOME}/plugins
+ENV PATH ${BCFTOOLS_HOME}/bin:${PATH}
+ENV MANPATH ${BCFTOOLS_HOME}/share/man:${MANPATH}
+ENV LD_LIBRARY_PATH ${BCFTOOLS_HOME}/lib:${LD_LIBRARY_PATH}
+
+
+#RUN git clone git://github.com/samtools/bcftools.git --branch ${BCFTOOLS_VERSION} \
+#	&& cd bcftools \
+# && autoheader && autoconf && ./configure --prefix=${BCFTOOLS_HOME} --with-htslib=${HTSLIB_HOME} \
+#	&& make 
+
+###############################################
 #BEDTOOLS = 'bedtools/intel/2.27.1'
-#NEATGENREADS = 'neat-genreads/v2'
-#FREEBAYES = 'freebayes/intel/1.1.0'
+
+ENV BEDTOOLS_VERSION 2.27.1
+ENV BEDTOOLS_HOME ${APPS_ROOT}/bedtools/${BEDTOOLS_VERSION}
+ENV PATH ${BEDTOOLS_HOME}/bin:${PATH}
+
+RUN wget https://github.com/arq5x/bedtools2/releases/download/v${BEDTOOLS_VERSION}/bedtools-${BEDTOOLS_VERSION}.tar.gz \
+	&& tar -zxvf bedtools-${BEDTOOLS_VERSION}.tar.gz \
+	&& make -C bedtools2 \
+	&& mkdir -p ${BEDTOOLS_HOME}/bin \
+	&& mv bedtools2/bin/* ${BEDTOOLS_HOME}/bin \
+	&& rm -Rf bedtools2 bedtools-${BEDTOOLS_VERSION}.tar.gz
+
+###############################################
+#NEATGENREADS = 'neat-genreads/v2
+# Requires: Python 2.7, Numpy 1.9.1+
+
+###############################################
 #SEQTK = 'seqtk/intel/1.2-r94'
-#BIOPYTHON = 'biopython/intel/python3.6/1.72'
-#VARSCAN = 'varscan/2.4.2'
-#IVAR = 'ivar/1.2.3'
+
+ENV SEQTK_VERSION 1.2
+ENV SEQTK_HOME ${APPS_ROOT}/seqtk/${SEQTK_VERSION}
+ENV PATH ${SEQTK_HOME}:${PATH}
+
+RUN git clone https://github.com/lh3/seqtk.git --branch v${SEQTK_VERSION} ${SEQTK_HOME} \
+  && make -C ${SEQTK_HOME}
+
+###############################################
+	#BIOPYTHON = 'biopython/intel/python3.6/1.72'
+	#conda install -c bioconda biopython=1.72
+	#VARSCAN = 'varscan/2.4.2'
+	#conda install -c bioconda varscan=2.4.2
+	#IVAR = 'ivar/1.2.3'
+	#conda install ivar=1.2.3
+	#FREEBAYES = 'freebayes/intel/1.1.0'
+	#conda install freebayes=1.1.0
+	
