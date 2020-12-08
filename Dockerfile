@@ -252,53 +252,32 @@ RUN mkdir -p ${VARSCAN_HOME} \
 
 
 ###############################################
-	#BIOPYTHON = 'biopython/intel/python3.6/1.72'
-	#conda install -c bioconda biopython=1.72
-	#IVAR = 'ivar/1.2.3'
-	#conda install ivar=1.2.3
+#IVAR = 'ivar/1.2.3'
+
+ENV IVAR_VERSION 1.2.3
+ENV IVAR_HOME ${APPS_ROOT}/ivar/${IVAR_VERSION}
+
+RUN yum -y install centos-release-scl \
+  && yum -y install devtoolset-8-gcc devtoolset-8-gcc-c++ \
+  && git clone https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION} ${IVAR_HOME} \
+	&& cd ${IVAR_HOME} \
+  && ./autogen.sh \
+  && ./configure --with-hts=${HTSLIB_HOME} \
+  && scl enable devtoolset-8 -- make -j \
+  && scl enable devtoolset-8 -- make install \
+	&& cd /
 
 ###############################################
-#CONDA
-#RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
-#  && bash ~/miniconda.sh -b -p $HOME/miniconda \
-#  && eval "$(~/miniconda/bin/conda shell.bash hook)" \
-#  && conda init \
-#  && conda config --add channels defaults \
-#  && conda config --add channels bioconda \
-#  && conda config --add channels conda-forge 
-	
-#RUN conda install python=2.7 \
-#  && conda install freebayes ivar varscan biopython pysam deeptools
-
-#RUN conda install -c bioconda freebayes seqtk biopython varscan ivar bcftools pilon trimmomatic snpeff==4.3 samtools==1.9 bwa==0.7.17
-
-#conda install -c bioconda freebayes seqtk biopython varscan ivar bcftools pilon trimmomatic snpeff==4.3 samtools==1.9 bwa==0.7.17
-
-###############################################
-#DEEPTOOLS = 'deeptools/3.3.1'
-
-# only python package
-#RUN  eval "$(~/miniconda/bin/conda shell.bash hook)" \
-#  && conda init \
-#  && conda install deeptools
-
-#ENV DEEPTOOLS_VERSION 3.3.1
-#ENV DEEPTOOLS_HOME ${APPS_ROOT}/deeptools/${DEEPTOOLS_VERSION}
-#ENV PATH ${DEEPTOOLS_HOME}/bin:${PATH}
-#
-#RUN wget https://github.com/deeptools/deepTools/archive/${DEEPTOOLS_VERSION}.tar.gz \
-# && tar -xzvf ${DEEPTOOLS_VERSION}.tar.gz \
-# && rm ${DEEPTOOLS_VERSION}.tar.gz \
-# && cd deepTools-${DEEPTOOLS_VERSION} \
-# && python setup.py install --prefix ${DEEPTOOLS_HOME} 
- 
-###############################################
-#PYSAM = 'pysam/intel/python3.6/0.14.1'
-
-# only python package
-#RUN  eval "$(~/miniconda/bin/conda shell.bash hook)" \
-#  && conda init \
-#  && conda install pysam
+#CONDA + 
+#biopython==1.72 deeptools==3.3.1 pysam==0.14.1
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
+  && bash ~/miniconda.sh -b -p $HOME/miniconda \
+  && eval "$(~/miniconda/bin/conda shell.bash hook)" \
+  && conda init \
+  && conda config --add channels defaults \
+  && conda config --add channels bioconda \
+  && conda config --add channels conda-forge 
+	&& conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6
 
 ###############################################
 #NEATGENREADS = 'neat-genreads/v2
