@@ -27,21 +27,12 @@ RUN yum -y install \
 	perl-ExtUtils-Embed \
 	cmake
 
-
 ENV APPS_ROOT /apps
 RUN mkdir -p ${APPS_ROOT}
 
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
-	&& bash ~/miniconda.sh -b -p $HOME/miniconda \
-	&& eval "$(~/miniconda/bin/conda shell.bash hook)" \
-	&& conda init \
-	&& conda config --add channels defaults \
-  && conda config --add channels bioconda \
-  && conda config --add channels conda-forge \
-	&& conda install python=2.7 \
-	&& conda install freebayes ivar varscan biopython pysam deeptools
-
-##RUN conda install -c bioconda freebayes seqtk biopython varscan ivar bcftools pilon trimmomatic snpeff==4.3 samtools==1.9 bwa==0.7.17#conda install -c bioconda freebayes seqtk biopython varscan ivar bcftools pilon trimmomatic snpeff==4.3 samtools==1.9 bwa==0.7.17
+###############################################
+# R packages
+RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
 
 ###############################################
 #BWA = 'bwa/intel/0.7.17'
@@ -52,7 +43,7 @@ ENV BWA_HOME ${APPS_ROOT}/bwa/${BWA_VERSION}
 ENV PATH ${BWA_HOME}:${PATH}
 
 RUN git clone --branch v${BWA_VERSION} https://github.com/lh3/bwa.git ${BWA_HOME} \
-	&& make -C ${BWA_HOME}
+  && make -C ${BWA_HOME}
 
 ###############################################
 #PICARD = 'picard/2.17.11'
@@ -102,16 +93,16 @@ ENV HTSLIB_INC ${HTSLIB_HOME}/include
 ENV HTSLIB_LIB ${HTSLIB_HOME}/lib
 
 RUN wget https://github.com/samtools/htslib/releases/download/${HTSLIB_VERSION}/htslib-${HTSLIB_VERSION}.tar.bz2 \
-	&& tar xjf htslib-${HTSLIB_VERSION}.tar.bz2 \
-	&& rm htslib-${HTSLIB_VERSION}.tar.bz2 \
-	&& cd htslib-${HTSLIB_VERSION} \
-	&& autoheader \
-	&& autoconf  \
-	&& ./configure --prefix=${HTSLIB_HOME} \
-	&& make \
-	&& make install \
-	&& cd / \
-	&& rm -Rf /htslib-${HTSLIB_VERSION}
+  && tar xjf htslib-${HTSLIB_VERSION}.tar.bz2 \
+  && rm htslib-${HTSLIB_VERSION}.tar.bz2 \
+  && cd htslib-${HTSLIB_VERSION} \
+  && autoheader \
+  && autoconf  \
+  && ./configure --prefix=${HTSLIB_HOME} \
+  && make \
+  && make install \
+  && cd / \
+  && rm -Rf /htslib-${HTSLIB_VERSION}
 
 ###############################################
 #SAMTOOLS = 'samtools/intel/1.9'
@@ -127,16 +118,16 @@ ENV SAMTOOLS_INC ${SAMTOOLS_HOME}/include
 ENV SAMTOOLS_LIB ${SAMTOOLS_HOME}/lib
 
 RUN wget https://github.com/samtools/samtools/releases/download/${SAMTOOLS_VERSION}/samtools-${SAMTOOLS_VERSION}.tar.bz2 \
-	&& tar xjf samtools-${SAMTOOLS_VERSION}.tar.bz2 \
-	&& rm samtools-${SAMTOOLS_VERSION}.tar.bz2 \
-	&& cd samtools-${SAMTOOLS_VERSION} \
-	&& autoheader \
-	&& autoconf -Wno-syntax \
-	&& ./configure --prefix=${SAMTOOLS_HOME} \
-	&& make \
-	&& make install \
-	&& cd / \
-	&& rm -Rf samtools-${SAMTOOLS_VERSION}
+  && tar xjf samtools-${SAMTOOLS_VERSION}.tar.bz2 \
+  && rm samtools-${SAMTOOLS_VERSION}.tar.bz2 \
+  && cd samtools-${SAMTOOLS_VERSION} \
+  && autoheader \
+  && autoconf -Wno-syntax \
+  && ./configure --prefix=${SAMTOOLS_HOME} \
+  && make \
+  && make install \
+  && cd / \
+  && rm -Rf samtools-${SAMTOOLS_VERSION}
 	
 ###############################################
 #SNPEFF = 'snpeff/4.3i'
@@ -148,9 +139,10 @@ ENV SNPEFF_JAR ${SNPEFF_HOME}/snpEff.jar
 ENV SNPSIFT_JAR ${SNPEFF_HOME}/SnpSift.jar
 
 RUN wget -O snpEff_v${SNPEFF_VERSION}_core.zip  https://sourceforge.net/projects/snpeff/files/snpEff_v${SNPEFF_VERSION}_core.zip/download# \
-	&& mkdir ${APPS_ROOT}/snpeff \
-	&& unzip snpEff_v${SNPEFF_VERSION}_core.zip \
-	&& mv snpEff ${APPS_ROOT}/snpeff/${SNPEFF_VERSION}
+  && mkdir ${APPS_ROOT}/snpeff \
+  && unzip snpEff_v${SNPEFF_VERSION}_core.zip \
+  && mv snpEff ${APPS_ROOT}/snpeff/${SNPEFF_VERSION} \
+	&& rm snpEff_v${SNPEFF_VERSION}_core.zip
 				
 ###############################################
 #TRIMMOMATIC = 'trimmomatic/0.36'
@@ -160,9 +152,10 @@ ENV TRIMMOMATIC_HOME ${APPS_ROOT}/trimmomatic/${TRIMMOMATIC_VERSION}
 ENV TRIMMOMATIC_JAR ${TRIMMOMATIC_HOME}/trimmomatic-${TRIMMOMATIC_VERSION}.jar
 
 RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-${TRIMMOMATIC_VERSION}.zip \
-	&& unzip Trimmomatic-${TRIMMOMATIC_VERSION}.zip \
-	&& mkdir -p ${APPS_ROOT}/trimmomatic \
-	&& mv Trimmomatic-${TRIMMOMATIC_VERSION} ${TRIMMOMATIC_HOME}s 
+  && unzip Trimmomatic-${TRIMMOMATIC_VERSION}.zip \
+  && mkdir -p ${APPS_ROOT}/trimmomatic \
+  && mv Trimmomatic-${TRIMMOMATIC_VERSION} ${TRIMMOMATIC_HOME} \
+	&& rm Trimmomatic-${TRIMMOMATIC_VERSION}.zip
 	
 ###############################################
 #PYPAIRIX = 'pypairix/intel/0.2.4'
@@ -172,12 +165,7 @@ ENV PAIRIX_HOME ${APPS_ROOT}/pairix/${PAIRIX_VERSION}
 ENV PATH ${PAIRIX_HOME}/bin:${PAIRIX_HOME}/util:${PAIRIX_HOME}/util/bam2pairs:${PATH}
 
 RUN git clone https://github.com/4dn-dcic/pairix --branch ${PAIRIX_VERSION} ${PAIRIX_HOME} \
-	&& make -C ${PAIRIX_HOME}
-
-###############################################
-#DEEPTOOLS = 'deeptools/3.3.1'
-
-# only python package
+  && make -C ${PAIRIX_HOME}
 
 ###############################################
 #JVARKIT = 'jvarkit/base'
@@ -192,11 +180,6 @@ ENV SORTSAMREFNAME_JAR ${JVARKIT_DIST}/sortsamrefname.jar
 
 RUN $JVARKIT_HOME/gradlew --project-dir $JVARKIT_HOME biostar154220
 ENV BIOSTAR_JAR ${JVARKIT_DIST}/biostar154220.jar
-
-###############################################
-#PYSAM = 'pysam/intel/python3.6/0.14.1'
-
-# only python package
 
 ###############################################
 #PILON = 'pilon/1.23'
@@ -214,15 +197,14 @@ RUN mkdir -p ${PILON_HOME} \
 ENV BCFTOOLS_VERSION 1.9
 ENV BCFTOOLS_HOME ${APPS_ROOT}/bcftools/${BCFTOOLS_VERSION}
 ENV BCFTOOLS_PLUGINS ${BCFTOOLS_HOME}/plugins
-ENV PATH ${BCFTOOLS_HOME}/bin:${PATH}
+ENV PATH ${BCFTOOLS_HOME}:${PATH}
 ENV MANPATH ${BCFTOOLS_HOME}/share/man:${MANPATH}
 ENV LD_LIBRARY_PATH ${BCFTOOLS_HOME}/lib:${LD_LIBRARY_PATH}
 
-
-#RUN git clone git://github.com/samtools/bcftools.git --branch ${BCFTOOLS_VERSION} \
-#	&& cd bcftools \
-# && autoheader && autoconf && ./configure --prefix=${BCFTOOLS_HOME} --with-htslib=${HTSLIB_HOME} \
-#	&& make 
+RUN git clone git://github.com/samtools/bcftools.git --branch ${BCFTOOLS_VERSION} ${BCFTOOLS_HOME} \
+  && cd ${BCFTOOLS_HOME} \
+  && autoheader && autoconf && ./configure --with-htslib=${HTSLIB_HOME} \
+  && make -j
 
 ###############################################
 #BEDTOOLS = 'bedtools/intel/2.27.1'
@@ -232,15 +214,11 @@ ENV BEDTOOLS_HOME ${APPS_ROOT}/bedtools/${BEDTOOLS_VERSION}
 ENV PATH ${BEDTOOLS_HOME}/bin:${PATH}
 
 RUN wget https://github.com/arq5x/bedtools2/releases/download/v${BEDTOOLS_VERSION}/bedtools-${BEDTOOLS_VERSION}.tar.gz \
-	&& tar -zxvf bedtools-${BEDTOOLS_VERSION}.tar.gz \
-	&& make -C bedtools2 \
-	&& mkdir -p ${BEDTOOLS_HOME}/bin \
-	&& mv bedtools2/bin/* ${BEDTOOLS_HOME}/bin \
-	&& rm -Rf bedtools2 bedtools-${BEDTOOLS_VERSION}.tar.gz
-
-###############################################
-#NEATGENREADS = 'neat-genreads/v2
-# Requires: Python 2.7, Numpy 1.9.1+
+  && tar -zxvf bedtools-${BEDTOOLS_VERSION}.tar.gz \
+  && make -C bedtools2 \
+  && mkdir -p ${BEDTOOLS_HOME}/bin \
+  && mv bedtools2/bin/* ${BEDTOOLS_HOME}/bin \
+  && rm -Rf bedtools2 bedtools-${BEDTOOLS_VERSION}.tar.gz
 
 ###############################################
 #SEQTK = 'seqtk/intel/1.2-r94'
@@ -253,12 +231,75 @@ RUN git clone https://github.com/lh3/seqtk.git --branch v${SEQTK_VERSION} ${SEQT
   && make -C ${SEQTK_HOME}
 
 ###############################################
+#FREEBAYES = 'freebayes/intel/1.1.0'
+
+ENV FREEBAYES_VERSION 1.1.0
+ENV FREEBAYES_HOME ${APPS_ROOT}/freebayes/${FREEBAYES_VERSION}
+ENV PATH ${FREEBAYES_HOME}/bin:${PATH}
+
+RUN git clone --branch v${FREEBAYES_VERSION} --recursive git://github.com/ekg/freebayes.git ${FREEBAYES_HOME} \
+  && make -C ${FREEBAYES_HOME}
+  
+###############################################
+#VARSCAN = 'varscan/2.4.2'
+
+ENV VARSCAN_VERSION 2.4.2
+ENV VARSCAN_HOME ${APPS_ROOT}/varscan/${VARSCAN_VERSION}
+ENV VARSCAN_JAR ${VARSCAN_HOME}/VarScan.v${VARSCAN_VERSION}.jar
+
+RUN mkdir -p ${VARSCAN_HOME} \
+  && wget https://github.com/dkoboldt/varscan/releases/download/${VARSCAN_VERSION}/VarScan.v${VARSCAN_VERSION}.jar -O ${VARSCAN_JAR}
+
+
+###############################################
 	#BIOPYTHON = 'biopython/intel/python3.6/1.72'
 	#conda install -c bioconda biopython=1.72
-	#VARSCAN = 'varscan/2.4.2'
-	#conda install -c bioconda varscan=2.4.2
 	#IVAR = 'ivar/1.2.3'
 	#conda install ivar=1.2.3
-	#FREEBAYES = 'freebayes/intel/1.1.0'
-	#conda install freebayes=1.1.0
+
+###############################################
+#CONDA
+#RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
+#  && bash ~/miniconda.sh -b -p $HOME/miniconda \
+#  && eval "$(~/miniconda/bin/conda shell.bash hook)" \
+#  && conda init \
+#  && conda config --add channels defaults \
+#  && conda config --add channels bioconda \
+#  && conda config --add channels conda-forge 
 	
+#RUN conda install python=2.7 \
+#  && conda install freebayes ivar varscan biopython pysam deeptools
+
+#RUN conda install -c bioconda freebayes seqtk biopython varscan ivar bcftools pilon trimmomatic snpeff==4.3 samtools==1.9 bwa==0.7.17
+
+#conda install -c bioconda freebayes seqtk biopython varscan ivar bcftools pilon trimmomatic snpeff==4.3 samtools==1.9 bwa==0.7.17
+
+###############################################
+#DEEPTOOLS = 'deeptools/3.3.1'
+
+# only python package
+#RUN  eval "$(~/miniconda/bin/conda shell.bash hook)" \
+#  && conda init \
+#  && conda install deeptools
+
+#ENV DEEPTOOLS_VERSION 3.3.1
+#ENV DEEPTOOLS_HOME ${APPS_ROOT}/deeptools/${DEEPTOOLS_VERSION}
+#ENV PATH ${DEEPTOOLS_HOME}/bin:${PATH}
+#
+#RUN wget https://github.com/deeptools/deepTools/archive/${DEEPTOOLS_VERSION}.tar.gz \
+# && tar -xzvf ${DEEPTOOLS_VERSION}.tar.gz \
+# && rm ${DEEPTOOLS_VERSION}.tar.gz \
+# && cd deepTools-${DEEPTOOLS_VERSION} \
+# && python setup.py install --prefix ${DEEPTOOLS_HOME} 
+ 
+###############################################
+#PYSAM = 'pysam/intel/python3.6/0.14.1'
+
+# only python package
+#RUN  eval "$(~/miniconda/bin/conda shell.bash hook)" \
+#  && conda init \
+#  && conda install pysam
+
+###############################################
+#NEATGENREADS = 'neat-genreads/v2
+# Requires: Python 2.7, Numpy 1.9.1+
