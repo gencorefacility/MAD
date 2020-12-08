@@ -271,14 +271,27 @@ RUN yum -y install centos-release-scl \
 #CONDA + 
 #biopython==1.72 deeptools==3.3.1 pysam==0.14.1
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
-  && bash ~/miniconda.sh -b -p $HOME/miniconda \
+  && bash ~/miniconda.sh -b -p ${HOME}/miniconda \
   && eval "$(~/miniconda/bin/conda shell.bash hook)" \
   && conda init \
   && conda config --add channels defaults \
   && conda config --add channels bioconda \
-  && conda config --add channels conda-forge 
+  && conda config --add channels conda-forge \
 	&& conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6
 
 ###############################################
 #NEATGENREADS = 'neat-genreads/v2
 # Requires: Python 2.7, Numpy 1.9.1+
+
+ENV NEATGENREADS_VERSION 2.0
+ENV NEATGENREADS_HOME ${APPS_ROOT}/neat-genreads/${NEATGENREADS_VERSION}
+ENV PATH ${NEATGENREADS_HOME}:${NEATGENREADS_HOME}/utilities:${PATH}
+ENV LD_LIBRARY_PATH ${NEATGENREADS_HOME}/lib:${LD_LIBRARY_PATH}
+
+RUN yum install python2-pip \
+  && pip install --upgrade pip \
+	&& pip install numpy \
+  && git clone --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
+	&& chmod +x ${NEATGENREADS_HOME}/*py \
+	&& chmod +x ${NEATGENREADS_HOME}/utilities/*py
+
