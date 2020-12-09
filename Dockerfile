@@ -142,7 +142,7 @@ RUN wget -O snpEff_v${SNPEFF_VERSION}_core.zip  https://sourceforge.net/projects
   && mkdir ${APPS_ROOT}/snpeff \
   && unzip snpEff_v${SNPEFF_VERSION}_core.zip \
   && mv snpEff ${APPS_ROOT}/snpeff/${SNPEFF_VERSION} \
-	&& rm snpEff_v${SNPEFF_VERSION}_core.zip
+  && rm snpEff_v${SNPEFF_VERSION}_core.zip
 				
 ###############################################
 #TRIMMOMATIC = 'trimmomatic/0.36'
@@ -155,7 +155,7 @@ RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmoma
   && unzip Trimmomatic-${TRIMMOMATIC_VERSION}.zip \
   && mkdir -p ${APPS_ROOT}/trimmomatic \
   && mv Trimmomatic-${TRIMMOMATIC_VERSION} ${TRIMMOMATIC_HOME} \
-	&& rm Trimmomatic-${TRIMMOMATIC_VERSION}.zip
+  && rm Trimmomatic-${TRIMMOMATIC_VERSION}.zip
 	
 ###############################################
 #PYPAIRIX = 'pypairix/intel/0.2.4'
@@ -260,12 +260,12 @@ ENV IVAR_HOME ${APPS_ROOT}/ivar/${IVAR_VERSION}
 RUN yum -y install centos-release-scl \
   && yum -y install devtoolset-8-gcc devtoolset-8-gcc-c++ \
   && git clone https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION} ${IVAR_HOME} \
-	&& cd ${IVAR_HOME} \
+  && cd ${IVAR_HOME} \
   && ./autogen.sh \
   && ./configure --with-hts=${HTSLIB_HOME} \
   && scl enable devtoolset-8 -- make -j \
   && scl enable devtoolset-8 -- make install \
-	&& cd /
+  && cd /
 
 ###############################################
 #CONDA + 
@@ -277,7 +277,7 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
   && conda config --add channels defaults \
   && conda config --add channels bioconda \
   && conda config --add channels conda-forge \
-	&& conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6
+  && conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6
 
 ###############################################
 #NEATGENREADS = 'neat-genreads/v2
@@ -288,10 +288,10 @@ ENV NEATGENREADS_HOME ${APPS_ROOT}/neat-genreads/${NEATGENREADS_VERSION}
 ENV PATH ${NEATGENREADS_HOME}:${NEATGENREADS_HOME}/utilities:${PATH}
 ENV LD_LIBRARY_PATH ${NEATGENREADS_HOME}/lib:${LD_LIBRARY_PATH}
 
-RUN yum install python2-pip \
-  && pip install --upgrade pip \
-	&& pip install numpy \
+RUN yum install -y python2-pip \
+  && pip2 install --upgrade pip \
+  && pip2 install numpy \
   && git clone --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
-	&& chmod +x ${NEATGENREADS_HOME}/*py \
-	&& chmod +x ${NEATGENREADS_HOME}/utilities/*py
+  && chmod +x ${NEATGENREADS_HOME}/*py \
+  && chmod +x ${NEATGENREADS_HOME}/utilities/*py
 
