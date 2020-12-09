@@ -294,7 +294,7 @@ RUN yum install -y python2-pip \
   && echo 'alias genReads.py="python2 ${NEATGENREADS_HOME}/genReads.py"' >> ~/.bashrc \
   && echo 'alias mergeJobs.py="python2 ${NEATGENREADS_HOME}/mergeJobs.py"' >> ~/.bashrc \
   && echo 'alias computeFraglen.py="python2 ${NEATGENREADS_HOME}/utilities/computeFraglen.py"' >> ~/.bashrc \
-  && echo 'alias computeGC.py="python2 ${NEATGENREADS_HOME}/utilities/computeGC.py"' >> ~/.bashrc \  
+  && echo 'alias computeGC.py="python2 ${NEATGENREADS_HOME}/utilities/computeGC.py"' >> ~/.bashrc \
   && echo 'alias genMutModel.py="python2 ${NEATGENREADS_HOME}/utilities/genMutModel.py"' >> ~/.bashrc \
   && echo 'alias genSeqErrorModel.py="python2 ${NEATGENREADS_HOME}/utilities/genSeqErrorModel.py"' >> ~/.bashrc \
   && echo 'alias plotMutModel.py="python2 ${NEATGENREADS_HOME}/utilities/plotMutModel.py"' >> ~/.bashrc \
