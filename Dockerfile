@@ -285,13 +285,20 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 
 ENV NEATGENREADS_VERSION 2.0
 ENV NEATGENREADS_HOME ${APPS_ROOT}/neat-genreads/${NEATGENREADS_VERSION}
-ENV PATH ${NEATGENREADS_HOME}:${NEATGENREADS_HOME}/utilities:${PATH}
 ENV LD_LIBRARY_PATH ${NEATGENREADS_HOME}/lib:${LD_LIBRARY_PATH}
 
 RUN yum install -y python2-pip \
   && pip2 install --upgrade pip \
   && pip2 install numpy \
   && git clone --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
-  && chmod +x ${NEATGENREADS_HOME}/*py \
-  && chmod +x ${NEATGENREADS_HOME}/utilities/*py
+  && echo 'alias genReads.py="python2 ${NEATGENREADS_HOME}/genReads.py"' >> ~/.bashrc \
+  && echo 'alias mergeJobs.py="python2 ${NEATGENREADS_HOME}/mergeJobs.py"' >> ~/.bashrc \
+  && echo 'alias computeFraglen.py="python2 ${NEATGENREADS_HOME}/utilities/computeFraglen.py"' >> ~/.bashrc \
+  && echo 'alias computeGC.py="python2 ${NEATGENREADS_HOME}/utilities/computeGC.py"' >> ~/.bashrc \  
+  && echo 'alias genMutModel.py="python2 ${NEATGENREADS_HOME}/utilities/genMutModel.py"' >> ~/.bashrc \
+  && echo 'alias genSeqErrorModel.py="python2 ${NEATGENREADS_HOME}/utilities/genSeqErrorModel.py"' >> ~/.bashrc \
+  && echo 'alias plotMutModel.py="python2 ${NEATGENREADS_HOME}/utilities/plotMutModel.py"' >> ~/.bashrc \
+  && echo 'alias validateBam.py="python2 ${NEATGENREADS_HOME}/utilities/validateBam.py"' >> ~/.bashrc \
+  && echo 'alias validateFQ.py="python2 ${NEATGENREADS_HOME}/utilities/validateFQ.py"' >> ~/.bashrc \
+  && echo 'alias vcf_compare_OLD.py="python2 ${NEATGENREADS_HOME}/utilities/vcf_compare_OLD.py"' >> ~/.bashrc \
 
