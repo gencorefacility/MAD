@@ -8,7 +8,7 @@ The MAD pipeline is a fully containerized, out of the box solution for evaluatin
 Nextflow v20.07.1
 
 ## Docker: 
-All required software is packeged in a docker container available at: https://hub.docker.com/r/gencorefacility/mad
+All required software is packaged in a docker container available at: https://hub.docker.com/r/gencorefacility/mad
 
 ## Config:
 Download and edit the following parameters in the config file (nextflow.config)
