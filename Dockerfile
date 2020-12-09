@@ -142,7 +142,7 @@ RUN wget -O snpEff_v${SNPEFF_VERSION}_core.zip  https://sourceforge.net/projects
   && mkdir ${APPS_ROOT}/snpeff \
   && unzip snpEff_v${SNPEFF_VERSION}_core.zip \
   && mv snpEff ${APPS_ROOT}/snpeff/${SNPEFF_VERSION} \
-  && rm snpEff_v${SNPEFF_VERSION}_core.zip
+	&& rm snpEff_v${SNPEFF_VERSION}_core.zip
 				
 ###############################################
 #TRIMMOMATIC = 'trimmomatic/0.36'
@@ -155,7 +155,7 @@ RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmoma
   && unzip Trimmomatic-${TRIMMOMATIC_VERSION}.zip \
   && mkdir -p ${APPS_ROOT}/trimmomatic \
   && mv Trimmomatic-${TRIMMOMATIC_VERSION} ${TRIMMOMATIC_HOME} \
-  && rm Trimmomatic-${TRIMMOMATIC_VERSION}.zip
+	&& rm Trimmomatic-${TRIMMOMATIC_VERSION}.zip
 	
 ###############################################
 #PYPAIRIX = 'pypairix/intel/0.2.4'
@@ -260,45 +260,51 @@ ENV IVAR_HOME ${APPS_ROOT}/ivar/${IVAR_VERSION}
 RUN yum -y install centos-release-scl \
   && yum -y install devtoolset-8-gcc devtoolset-8-gcc-c++ \
   && git clone https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION} ${IVAR_HOME} \
-  && cd ${IVAR_HOME} \
+	&& cd ${IVAR_HOME} \
   && ./autogen.sh \
   && ./configure --with-hts=${HTSLIB_HOME} \
   && scl enable devtoolset-8 -- make -j \
   && scl enable devtoolset-8 -- make install \
-  && cd /
+	&& cd /
 
 ###############################################
-#CONDA + 
-#biopython==1.72 deeptools==3.3.1 pysam==0.14.1
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
-  && bash ~/miniconda.sh -b -p ${HOME}/miniconda \
-  && eval "$(~/miniconda/bin/conda shell.bash hook)" \
-  && conda init \
-  && conda config --add channels defaults \
-  && conda config --add channels bioconda \
-  && conda config --add channels conda-forge \
-  && conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6
-
-###############################################
-#NEATGENREADS = 'neat-genreads/v2
-# Requires: Python 2.7, Numpy 1.9.1+
+#NEATGENREADS = 'neat-genreads/v2'
+#Requires: Python 2.7, Numpy 1.9.1+
 
 ENV NEATGENREADS_VERSION 2.0
 ENV NEATGENREADS_HOME ${APPS_ROOT}/neat-genreads/${NEATGENREADS_VERSION}
-ENV LD_LIBRARY_PATH ${NEATGENREADS_HOME}/lib:${LD_LIBRARY_PATH}
 
 RUN yum install -y python2-pip \
   && pip2 install --upgrade pip \
   && pip2 install numpy \
   && git clone --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
-  && echo 'alias genReads.py="python2 ${NEATGENREADS_HOME}/genReads.py"' >> ~/.bashrc \
-  && echo 'alias mergeJobs.py="python2 ${NEATGENREADS_HOME}/mergeJobs.py"' >> ~/.bashrc \
-  && echo 'alias computeFraglen.py="python2 ${NEATGENREADS_HOME}/utilities/computeFraglen.py"' >> ~/.bashrc \
-  && echo 'alias computeGC.py="python2 ${NEATGENREADS_HOME}/utilities/computeGC.py"' >> ~/.bashrc \
-  && echo 'alias genMutModel.py="python2 ${NEATGENREADS_HOME}/utilities/genMutModel.py"' >> ~/.bashrc \
-  && echo 'alias genSeqErrorModel.py="python2 ${NEATGENREADS_HOME}/utilities/genSeqErrorModel.py"' >> ~/.bashrc \
-  && echo 'alias plotMutModel.py="python2 ${NEATGENREADS_HOME}/utilities/plotMutModel.py"' >> ~/.bashrc \
-  && echo 'alias validateBam.py="python2 ${NEATGENREADS_HOME}/utilities/validateBam.py"' >> ~/.bashrc \
-  && echo 'alias validateFQ.py="python2 ${NEATGENREADS_HOME}/utilities/validateFQ.py"' >> ~/.bashrc \
-  && echo 'alias vcf_compare_OLD.py="python2 ${NEATGENREADS_HOME}/utilities/vcf_compare_OLD.py"' >> ~/.bashrc \
+  && echo 'alias genReads.py="python2 ${NEATGENREADS_HOME}/genReads.py"' >> /etc/profile.d/neatgen.sh \
+  && echo 'alias mergeJobs.py="python2 ${NEATGENREADS_HOME}/mergeJobs.py"' >> /etc/profile.d/neatgen.sh \
+  && echo 'alias computeFraglen.py="python2 ${NEATGENREADS_HOME}/utilities/computeFraglen.py"' >> /etc/profile.d/neatgen.sh \
+  && echo 'alias computeGC.py="python2 ${NEATGENREADS_HOME}/utilities/computeGC.py"' >> /etc/profile.d/neatgen.sh \
+  && echo 'alias genMutModel.py="python2 ${NEATGENREADS_HOME}/utilities/genMutModel.py"' >> /etc/profile.d/neatgen.sh \
+  && echo 'alias genSeqErrorModel.py="python2 ${NEATGENREADS_HOME}/utilities/genSeqErrorModel.py"' >> /etc/profile.d/neatgen.sh \
+  && echo 'alias plotMutModel.py="python2 ${NEATGENREADS_HOME}/utilities/plotMutModel.py"' >> /etc/profile.d/neatgen.sh \
+  && echo 'alias validateBam.py="python2 ${NEATGENREADS_HOME}/utilities/validateBam.py"' >> /etc/profile.d/neatgen.sh \
+  && echo 'alias validateFQ.py="python2 ${NEATGENREADS_HOME}/utilities/validateFQ.py"' >> /etc/profile.d/neatgen.sh \
+  && echo 'alias vcf_compare_OLD.py="python2 ${NEATGENREADS_HOME}/utilities/vcf_compare_OLD.py"' >> /etc/profile.d/neatgen.sh
 
+###############################################
+#CONDA + 
+#biopython==1.72 deeptools==3.3.1 pysam==0.14.1
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
+  && bash ~/miniconda.sh -b -p ${APPS_ROOT}/miniconda \
+  && eval "$(${APPS_ROOT}/miniconda/bin/conda shell.bash hook)" \
+  && conda config --add channels defaults \
+  && conda config --add channels bioconda \
+  && conda config --add channels conda-forge \
+	&& conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6 \
+	&& echo '. ${APPS_ROOT}/miniconda/etc/profile.d/conda.sh' >> /etc/profile.d/miniconda.sh
+		
+###############################################
+#PYSAM = pysam/intel/0.10.0
+
+RUN pip2 install pysam==0.10.0
+
+
+RUN echo 'conda activate base' >> /etc/profile.d/miniconda.sh
