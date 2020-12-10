@@ -9,7 +9,6 @@
 // can be overridden in config or via command line
 params.out = "${params.outdir}/out"
 params.tmpdir = "${params.outdir}/gatk_temp"
-params.snpEff_config = "static/snpEff.config"
 
 println "ref: $params.ref"
 println "outdir: $params.out"
