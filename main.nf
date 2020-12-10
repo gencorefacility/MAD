@@ -306,14 +306,13 @@ process markDuplicatesSpark  {
 
     script:
     """
-    #mkdir -p $params.tmpdir/$workflow.runName/$sample_id
-    #gatk --java-options "-Djava.io.tmpdir=${params.tmpdir}/${workflow.runName}/${sample_id}"
-    gatk \
+    mkdir -p $params.tmpdir/$workflow.runName/$sample_id
+    gatk --java-options "-Djava.io.tmpdir=${params.tmpdir}/${workflow.runName}/${sample_id}" \
 	MarkDuplicatesSpark \
 	-I ${bam} \
 	-M ${sample_id}_dedup_metrics.txt \
 	-O ${sample_id}_sorted_dedup.bam
-    #rm -r $params.tmpdir/$workflow.runName/$sample_id
+    rm -r $params.tmpdir/$workflow.runName/$sample_id
     """ 
 }
 
