@@ -11,35 +11,11 @@ params.out = "${params.outdir}/out"
 params.tmpdir = "${params.outdir}/gatk_temp"
 params.snpEff_config = "static/snpEff.config"
 
-// Define modules here
-BWA = 'bwa/intel/0.7.17'
-PICARD = 'picard/2.17.11'
-GATK = 'gatk/4.1.7.0'
-R = 'r/intel/3.4.2'
-SAMTOOLS = 'samtools/intel/1.9'
-TRIMMOMATIC = 'trimmomatic/0.36'
-SNPEFF = 'snpeff/4.3i'
-PYPAIRIX = 'pypairix/intel/0.2.3'
-HTSLIB = 'htslib/intel/1.4.1'
-DEEPTOOLS = 'deeptools/3.3.1'
-JVARKIT = 'jvarkit/base'
-PYSAM = 'pysam/intel/python3.6/0.14.1'
-PILON = 'pilon/1.23'
-BCFTOOLS = 'bcftools/intel/1.9'
-BEDTOOLS = 'bedtools/intel/2.27.1'
-NEATGENREADS = 'neat-genreads/v2'
-FREEBAYES = 'freebayes/intel/1.1.0'
-SEQTK = 'seqtk/intel/1.2-r94'
-BIOPYTHON = 'biopython/intel/python3.6/1.72'
-VARSCAN = 'varscan/2.4.2'
-IVAR = 'ivar/1.2.3'
-
 println "ref: $params.ref"
 println "outdir: $params.out"
 
 // Stage some files we will need
 ref = file(params.ref)
-snpeff_config = file(params.snpEff_config)
 error_model_fq_read1 = file(params.error_model_fq_read1)
 error_model_fq_read2 = file(params.error_model_fq_read2)
 mut_model_vcf = file(params.mut_model_vcf)
@@ -60,16 +36,68 @@ Channel
     { file -> file.getBaseName() - ~/.bam/ }
     .set { bams_in_ch }
 
-process readsim_1{
+process genMutModel{
+    output:
+    file('MutModel.p') into mut_model_ch
+
+    script:
+    """
+    python2 /apps/neat-genreads/2.0/utilities/genMutModel.py \
+        -r $ref \
+        -m $mut_model_vcf \
+        -o MutModel.p \
+	--no-whitelist
+    """
+}
+
+process seqErrorModel{
+    output:
+    file('SeqErrorModel.p') into seq_err_model_ch
+    file('SeqErrorModel.p') into seq_err_model_ch_2
+
+    script:
+    """
+    python2 /apps/neat-genreads/2.0/utilities/genSeqErrorModel.py \
+        -i $error_model_fq_read1 \
+        -o SeqErrorModel.p \
+        -i2 $error_model_fq_read2    
+    """
+}
+
+process gcModel{
+    output:
+    file('gc_model.p') into gc_model_ch
+
+
+    script:
+    """
+    bedtools genomecov -d -ibam $readsim_model_bam > ${readsim_model_bam}.genomecov
+    python2 /apps/neat-genreads/2.0/utilities/computeGC.py -r $ref -i ${readsim_model_bam}.genomecov -o gc_model.p
+    """
+}
+
+process fraglenModel{
+    output:
+    file('fraglen.p') into fraglen_model_ch
+    file('fraglen.p') into fraglen_model_ch_2
+
+    script:
+    """
+    samtools view $readsim_model_bam | python2 /apps/neat-genreads/2.0/utilities/computeFraglen.py    
+    """
+}
+
+process simulate_snvs{
     publishDir "${params.out}/readsim_1", mode:'copy'
+
+    input:
+    file(mut_model) from mut_model_ch
+    file(seq_err_model) from seq_err_model_ch
+    file(fraglen_model) from fraglen_model_ch
 
     output:
     set val(pair_id),
-	file("${pair_id}_golden.vcf"),
-	file("SeqErrorModel.p"),
-	file("gc_model.p"),
-	file("fraglen.p") \
-	into readsim_1_out_ch
+	file("${pair_id}_golden.vcf") into readsim_1_out_ch
     file('*') into readsim_out
 
     when:
@@ -78,49 +106,30 @@ process readsim_1{
     script:
     pair_id = params.fcid
     """
-    module purge
-    module load $NEATGENREADS
-    module load $SAMTOOLS
-    genMutModel.py \
-	-r $ref \
-	-m $mut_model_vcf \
-	-o MutModel.p \
-	--no-whitelist
-    genSeqErrorModel.py \
-        -i $error_model_fq_read1 \
-        -o SeqErrorModel.p \
-        -i2 $error_model_fq_read2
-    # below is for GC model
-    module load $BEDTOOLS
-    bedtools genomecov -d -ibam $readsim_model_bam > ${readsim_model_bam}.genomecov
-    computeGC.py -r $ref -i ${readsim_model_bam}.genomecov -o gc_model.p 
-    # below command produces fraglen.p
-    samtools view $readsim_model_bam | computeFraglen.py
-    genReads.py \
+    python2 /apps/neat-genreads/2.0/genReads.py \
 	-r $ref \
 	-p 100 \
 	-R 151 \
 	-o $pair_id \
-	-e SeqErrorModel.p \
-	-m MutModel.p \
-	-M 0.0045 \
+	-e $seq_err_model \
+	-m $mut_model \
+	-M $params.mut_rate \
 	--vcf \
-	--pe-model fraglen.p \
+	--pe-model $fraglen_model \
 	--no-fastq \
 	-c $params.readsim_cov
     """
 }
 
-process readsim_2{
+process simulate_reads{
     publishDir "${params.out}/readsim_2", mode:'copy'
 
     input:
     set val(pair_id), 
-	file(vcf),
-	file(seq_error_model),
-	file(gc_model),
-	file(pe_model) \
-	from readsim_1_out_ch
+    file(vcf) from readsim_1_out_ch
+    file(seq_err_model) from seq_err_model_ch_2
+    file(fraglen_model) from fraglen_model_ch_2
+    file(gc_model) from gc_model_ch
     each af from params.readsim_allele_fracs
 
     output:
@@ -129,31 +138,42 @@ process readsim_2{
 	file("${pair_id}_read2.fq"),
 	file("${pair_id}.vcf") \
 	into readsim_out_ch
+    file("${pair_id}.vcf") into analyze_af_report_vcf
 
     script:
     pair_id = pair_id + "_AF_${af}"
     """
     # This script will edit the GT of all snps to $af
     # for consumption by genReads.py in the next step
-    module load $PYSAM
-    prepare_neat_vcf.py $vcf $af > ${pair_id}.vcf
+    prepare_neat_vcf.py $vcf $ref $af > ${pair_id}.vcf
     
     # Simulate reads inserting snps from the output
     # of the above step directly into the reads
-    module purge
-    module load $NEATGENREADS
-    genReads.py \
+    python2 /apps/neat-genreads/2.0/genReads.py \
 	-r $ref \
 	-p 100 \
 	-R 151 \
 	-o ${pair_id} \
-	-e $seq_error_model \
+	-e $seq_err_model \
 	-v ${pair_id}.vcf \
 	--vcf \
-	--pe-model $pe_model \
+	--pe-model $fraglen_model \
 	--gc-model $gc_model \
 	-c $params.readsim_cov \
 	-M 0
+
+
+    # Simulate reads inserting snps from the output
+    # of the above step directly into the reads 
+    # using ReSeq
+    #reseq illuminaPE \
+    #    -r $ref \
+    #    -b $readsim_model_bam \
+    #    -V ${pair_id}.vcf \
+    #    -1 ${pair_id}_read1.fq \
+    #    -2 ${pair_id}_read2.fq \
+    #    -c $params.readsim_cov \
+    #	--noBias
     """
 }
 
@@ -184,7 +204,6 @@ process downsample_readsim_fq{
 
     if (frac < 1.0)
     """
-    module load $SEQTK
     seqtk sample -s${seed} ${read1} $frac > ${pair_id}_read1.fq
     seqtk sample -s${seed} ${read2} $frac > ${pair_id}_read2.fq
     modify_neat_dp.py $vcf $downsampled_dp > ${pair_id}_golden.vcf
@@ -214,7 +233,6 @@ process trim {
 
     script:
     """
-    module load $TRIMMOMATIC
     java -jar \$TRIMMOMATIC_JAR \
 	PE \
 	-phred33 \
@@ -242,12 +260,10 @@ process align {
     set val(pair_id), 
 	file("${pair_id}_aligned_reads.bam") \
 	into aligned_reads_ch
-    val(pair_id) into jbrowse_pair_id_ch
 	
     script:
     readGroup = "@RG\\tID:${pair_id}\\tLB:${pair_id}\\tPL:${params.pl}\\tPM:${params.pm}\\tSM:${pair_id}"
     """
-    module load $BWA
     bwa mem \
 	-K 100000000 \
 	-v 3 -t ${task.cpus} \
@@ -258,7 +274,6 @@ process align {
 	$read_2 \
 	> ${pair_id}_aligned_reads.sam
 
-    module load $PICARD
     java -jar \$PICARD_JAR SortSam \
 	I=${pair_id}_aligned_reads.sam \
 	O=${pair_id}_aligned_reads.bam \
@@ -279,25 +294,26 @@ process markDuplicatesSpark  {
     set val(sample_id),
 	file("${sample_id}_sorted_dedup.bam") \
 	into sorted_dedup_bam_ch, sorted_dedup_ch_for_metrics, \
-	downsample_bam_ch, pilon_ch, bcftools_ch, consensus_bam_ch, \
-	mutect2_ch, tims_pipeline_ch, varscan_ch, ivar_ch
+	downsample_bam_ch, pilon_ch, bcftools_ch, mutect2_ch, \
+	tims_pipeline_ch, varscan_ch, ivar_ch, cliquesnv_ch
     set val(sample_id),
         file("${sample_id}_sorted_dedup.bam"),
         file("${sample_id}_sorted_dedup.bam.bai") \
-	into bw_ch, freebayes_ch
+	into bw_ch, freebayes_ch, lofreq_ch
     set val(sample_id),
 	file("${sample_id}_dedup_metrics.txt") into dedup_qc_ch
+    val(sample_id) into pair_id_ch
 
     script:
     """
-    module load $GATK
-    mkdir -p $params.tmpdir/$workflow.runName/$sample_id
-    gatk --java-options "-Djava.io.tmpdir=${params.tmpdir}/${workflow.runName}/${sample_id}" \
+    #mkdir -p $params.tmpdir/$workflow.runName/$sample_id
+    #gatk --java-options "-Djava.io.tmpdir=${params.tmpdir}/${workflow.runName}/${sample_id}"
+    gatk \
 	MarkDuplicatesSpark \
 	-I ${bam} \
 	-M ${sample_id}_dedup_metrics.txt \
 	-O ${sample_id}_sorted_dedup.bam
-    rm -r $params.tmpdir/$workflow.runName/$sample_id
+    #rm -r $params.tmpdir/$workflow.runName/$sample_id
     """ 
 }
 
@@ -318,9 +334,6 @@ process getMetrics {
 
     script:
     """
-    module load $PICARD
-    module load $R
-    module load $SAMTOOLS
     java -jar \$PICARD_JAR \
         CollectAlignmentSummaryMetrics \
 	R=${params.ref} \
@@ -335,7 +348,7 @@ process getMetrics {
     """
 }
 
-process tims_pipeline{
+process timo{
     publishDir "${params.out}/tims-pipeline", mode:'copy'
 
     input:
@@ -344,19 +357,13 @@ process tims_pipeline{
 
     output:
     file("${sample_id}_tims.vcf") into tims_bzip_tabix_vcf_ch
-    file("${sample_id}_tims_nb.vcf") into tims_nb_bzip_tabix_vcf_ch
     set val(sample_id),
         file("${sample_id}_tims.vcf") \
         into tims_vcf_ch
-    set val(sample_id),
-        file("${sample_id}_tims_nb.vcf") \
-        into tims_nb_vcf_ch
     file '*' into tims_out_ch
 
     script:
     """
-    module load $SAMTOOLS
-    module load pysam/intel/0.10.0
     samtools view -bq 20 -F 1284 -o filtered.bam $preprocessed_bam
     samtools index filtered.bam
     readreport_v4_2.py \
@@ -364,15 +371,11 @@ process tims_pipeline{
 	--ref $ref \
 	-c 0.001 \
 	-C 1
-    module purge
-    module load $BIOPYTHON
-    parse_tims_output.py $ref FILES/fullvarlist/filtered.STRAIN.SARS-CoV2.0.001.snplist.csv
-    mv FILES/fullvarlist/filtered.STRAIN.SARS-CoV2.0.001.vcf ${sample_id}_tims.vcf
-
-    # Parse tims output again, this time ignoring the binom filter 
-    # (passing true as third param to set ignore_binom = True)
-    parse_tims_output.py $ref FILES/fullvarlist/filtered.STRAIN.SARS-CoV2.0.001.snplist.csv true
-    mv FILES/fullvarlist/filtered.STRAIN.SARS-CoV2.0.001.vcf ${sample_id}_tims_nb.vcf
+    ## parse_tims_output.py will look for all files created by 
+    ## readreport_v4_2.py in the working directory and convert
+    ## them into a single VCF file
+    parse_tims_output.py $ref ${sample_id}
+    mv ${sample_id}.vcf ${sample_id}_tims.vcf
     """
 
 }
@@ -392,8 +395,6 @@ process varscan {
 
     script:
     """
-    module load $SAMTOOLS
-    module load $VARSCAN
     samtools mpileup -f $ref $preprocessed_bam |\
 	java -jar \$VARSCAN_JAR pileup2snp \
 	--min-coverage 1 \
@@ -419,10 +420,66 @@ process ivar{
 
     script:
     """
-    module load $SAMTOOLS
-    module load $IVAR
     samtools mpileup -aa -A -d 0 -B -Q 0 ${preprocessed_bam} | ivar variants -p ${sample_id}_ivar -t 0.001 -r $ref
     ivar_to_vcf.py ${sample_id}_ivar.tsv
+    """
+}
+
+process lofreq{
+    publishDir "${params.out}/lofreq", mode:'copy'
+
+    input:
+    set val(sample_id),
+        file(preprocessed_bam),
+	file(preprocessed_bam_index) from lofreq_ch
+
+    output:
+    file("${sample_id}_lofreq.vcf") into lofreq_bzip_tabix_vcf_ch
+    set val(sample_id),
+        file("${sample_id}_lofreq.vcf") \
+        into lofreq_vcf_ch
+    file '*' into lofreq_out_ch
+
+    script:
+    """
+    lofreq call-parallel \
+	--pp-threads ${task.cpus} \
+	-f $ref \
+	-o ${sample_id}_lofreq.vcf \
+	$preprocessed_bam
+    """
+}
+
+process cliquesnv{
+    publishDir "${params.out}/cliquesnv", mode:'copy'
+
+    input:
+    set val(sample_id),
+        file(preprocessed_bam) from cliquesnv_ch
+
+    output:
+    file("${sample_id}_cliquesnv.vcf") into cliquesnv_bzip_tabix_vcf_ch
+    set val(sample_id),
+        file("${sample_id}_cliquesnv.vcf") \
+        into cliquesnv_vcf_ch
+    file '*' into cliquesnv_out_ch
+
+    when:
+    false
+
+    script:
+    """
+    java  -Xmx58G -jar \$CLIQUESNV_JAR \
+	-m snv-illumina-vc \
+	-in $preprocessed_bam \
+	-outDir vcf_out/ \
+	-t 1 \
+	-tf 0.005
+    mv vcf_out/${preprocessed_bam.baseName}.vcf ${sample_id}_cliquesnv.vcf
+    
+    # CliqueSNV names contig as 'ref' for some reason, rename it to 'SARS-CoV2'
+    # here for downstream analysis (ex: bcftools isec). Todo: Make this param
+    sed -i 's/ref/SARS-CoV2/g' ${sample_id}_cliquesnv.vcf
     """
 }
 
@@ -446,7 +503,6 @@ process freebayes{
     name = freebayes_config[0]
     fb_params = freebayes_config[1]
     """
-    module load $FREEBAYES
     freebayes $fb_params -f $ref $preprocessed_bam > ${sample_id}_freebayes_${name}.vcf
     """
 }
@@ -463,12 +519,11 @@ process mutect2{
     set val(sample_id), 
 	file("${sample_id}_mutect2_filtered_pf.vcf") \
 	into mutect2_vcf_ch
-    file("${sample_id}_mutect2_filtered.vcf") into mutect2_bzip_tabix_vcf_ch
+    file("${sample_id}_mutect2_filtered_pf.vcf") into mutect2_bzip_tabix_vcf_ch
     file '*' into mutect2_out_ch
 
     script:
     """
-    module load $GATK
     gatk Mutect2 -R $ref -I $preprocessed_bam -O ${sample_id}_mutect2.vcf
     gatk FilterMutectCalls -R $ref -V ${sample_id}_mutect2.vcf -O ${sample_id}_mutect2_filtered.vcf
     gatk SelectVariants -R $ref -V ${sample_id}_mutect2_filtered.vcf --exclude-filtered -O ${sample_id}_mutect2_filtered_pf.vcf
@@ -488,7 +543,6 @@ process pilon{
 
     script:
     """
-    module load $PILON
     java -Xmx16G -jar \$PILON_JAR \
 	--genome $ref \
 	--bam $preprocessed_bam \
@@ -499,7 +553,6 @@ process pilon{
 	--mindepth 10 \
 	--output ${sample_id}_pilon_g
     
-    module load $GATK
     gatk SelectVariants \
 	-V ${sample_id}_pilon_g.vcf \
 	-O ${sample_id}_pilon.vcf \
@@ -520,7 +573,6 @@ process bcftools{
 
     script:
     """
-    module load $BCFTOOLS
     bcftools mpileup \
 	--redo-BAQ \
 	--adjust-MQ 50 \
@@ -543,45 +595,22 @@ process haplotypeCaller {
 	file(preprocessed_bam) from sorted_dedup_bam_ch
 
     output:
-    set val(sample_id), 
-	file("${sample_id}_raw_variants.vcf") into hc_output_ch
-    
+    set val(sample_id),
+        file("${sample_id}_raw_snps.vcf") \
+        into raw_snps_ch, raw_snps_qc_ch
+
     script:
     """
-    module load $GATK
     gatk HaplotypeCaller \
 	-R $ref \
 	-I $preprocessed_bam \
 	-O ${sample_id}_raw_variants.vcf \
 	-ploidy 100
-    """
-}
-
-process selectVariants {
-    input:
-    set val(sample_id), 
-	file(raw_variants) from hc_output_ch
-
-    output:
-    set val(sample_id),
-	file("${sample_id}_raw_snps.vcf") \
-	into raw_snps_ch, raw_snps_qc_ch
-    set val(sample_id),
-	file("${sample_id}_raw_indels.vcf") into raw_indels_ch
-
-    script:
-    """
-    module load $GATK
-    gatk SelectVariants \
-	-R $ref \
-	-V $raw_variants \
-	-select-type SNP \
-	-O ${sample_id}_raw_snps.vcf
     gatk SelectVariants \
         -R $ref \
-        -V $raw_variants \
-        -select-type INDEL \
-        -O ${sample_id}_raw_indels.vcf
+        -V ${sample_id}_raw_variants.vcf \
+        -select-type SNP \
+        -O ${sample_id}_raw_snps.vcf
     """
 }
 
@@ -595,23 +624,10 @@ process filterSnps {
     output:
     set val(sample_id),
         file("${sample_id}_filtered_snps.vcf") \
-        into filtered_snps_qc_ch
-    set val(sample_id),
-	file("${sample_id}_filtered_snps_eaf.vcf") \
-	into snpeff_ch
-    set val(sample_id),
-        file("${sample_id}_consensus_snps.vcf") \
-        into consensus_snps_ch
-    file("${sample_id}_consensus_snps.vcf") \
-	into cons_bzip_tabix_vcf_ch
-    set val(sample_id),
-        file("${sample_id}_filtered_snps.vcf") \
-        into hc_vcf_ch
-
+        into filtered_snps_qc_ch, hc_vcf_ch
 
     script:
     """
-    module load $GATK
     gatk VariantFiltration \
 	-R $ref \
 	-V $raw_snps \
@@ -624,115 +640,7 @@ process filterSnps {
 
     # This script generates the _consensus_snps.vcf
     # and _eaf.vcf (empirical AF) files
-    module load $PYSAM
     filter_variants.py ${sample_id}
-    """
-}
-
-process filterIndels {
-    publishDir "${params.out}/filtered_indels", mode:'copy'
-    input:
-    set val(sample_id),
-	file(raw_indels) from raw_indels_ch
-
-    output:
-    file("${sample_id}_filtered_indels.vcf") into indel_bzip_tabix_vcf_ch
-
-    script:
-    """
-    module load $GATK
-    gatk VariantFiltration \
-        -R $ref \
-        -V $raw_indels \
-        -O ${sample_id}_filtered_indels.vcf \
-	-filter-name "DP_filter" -filter "DP < 20.0" \
-	-filter-name "QD_filter" -filter "QD < 2.0" \
-	-filter-name "FS_filter" -filter "FS > 200.0" \
-	-filter-name "SOR_filter" -filter "SOR > 10.0"
-    """
-}
-
-process consensus {
-    publishDir "${params.out}/consensus", mode:'copy' 
-
-    input:
-    set val(sample_id), 
-	file(filtered_snps),
-	file(bam) \
-	from consensus_snps_ch
-	.join(consensus_bam_ch)
-
-    output:
-    file("${sample_id}*.fasta") into consensus_ch
-
-    when:
-    false
-
-    script:
-    """
-    module load $GATK
-    module load $BEDTOOLS
-    module load $SAMTOOLS
-
-    gatk IndexFeatureFile \
-	-F $filtered_snps
-    gatk FastaAlternateReferenceMaker \
-	-R $ref \
-	-O ${sample_id}.fasta \
-	-V $filtered_snps
-    
-    # chromosome ID needs to match ID in bam for bedtools (maskfasta)
-    sed -i 's/1 SARS-CoV2:1-29903/SARS-CoV2/g' ${sample_id}.fasta
-    for x in {6,10,20}
-    do
-	# make bedfile with regions below x coverage
-        # genomecov generates bedgraph file
-	# genomecov input is filtered for min MAPQ (20)
-	# and to remove dups and non-primary alignments
-	# first awk filters bedgraph for coverage <= x
-	# second awk converts bedgraph to 3-col bedfile
-	samtools view \
-		-bq 20 \
-		-F 1284 \
-		$bam | \
-		bedtools genomecov \
-		-ibam stdin \
-		-bga | \
-		awk -v threshold="\$x" '\$4<threshold' | \
-		awk '{print \$1 "\t" \$2 "\t" \$3}' \
-		> ${sample_id}_below_\${x}_cov.bed
-
-	# mask all regions in bedfile produced above
-	bedtools maskfasta \
-		-fi ${sample_id}.fasta \
-		-bed ${sample_id}_below_\${x}_cov.bed \
-		-fo ${sample_id}_below_\${x}_masked.fasta
-
-	# rename the fasta header from ref name to sample id
-	sed -i 's/SARS-CoV2/${sample_id}/g' ${sample_id}_below_\${x}_masked.fasta
-    done
-    """
-}
-
-process snpEff{
-    publishDir "${params.out}/snpEff", mode:'copy'
-
-    input:
-    set val(sample_id), 
-	file(snps) \
-	from snpeff_ch
-
-    output:
-    file '*' into snpeff_out
-    file("${sample_id}_filtered_snps.ann.vcf") into snpeff_bzip_tabix_vcf_ch
-
-    script:
-    """
-    module load $SNPEFF
-    java -jar \$SNPEFF_JAR -v \
-        -c $snpeff_config \
-        SARS-CoV2_NC_045512.2 \
-        $snps > ${sample_id}_filtered_snps.ann.vcf
     """
 }
 
@@ -749,11 +657,10 @@ process make_bw{
     file("${id}_coverage.bam.bw") into jbrowse_bw_ch 
 
     when:
-    !id.contains("frac_0.00001") || !id.contains("frac_0.0001")
+    false
 
     script:
     """
-    module load $DEEPTOOLS
     bamCoverage \
         -p max  \
         --bam $bam \
@@ -772,10 +679,11 @@ process downsample_bam{
     set file("${sample_id}_downsampled.bam"),
         file("${sample_id}_downsampled.bam.bai") into jbrowse_bam_ch
 
+    when:
+    false
+
     script:
     """
-    module load $JVARKIT
-    module load $SAMTOOLS
     java -jar \$SORTSAMREFNAME_JAR \
         --samoutputformat BAM \
         $bam |\
@@ -790,29 +698,33 @@ process downsample_bam{
 process bzip_tabix_vcf{
     input:
     file(vcf) from pilon_bzip_tabix_vcf_ch
-	.mix(cons_bzip_tabix_vcf_ch)
-	.mix(indel_bzip_tabix_vcf_ch)
-	.mix(snpeff_bzip_tabix_vcf_ch)
-	.mix(bcftools_bzip_tabix_vcf_ch)
 	.mix(mutect2_bzip_tabix_vcf_ch)
 	.mix(freebayes_bzip_tabix_vcf_ch)
 	.mix(downsample_bzip_tabix_vcf_ch)
 	.mix(tims_bzip_tabix_vcf_ch)
-	.mix(tims_nb_bzip_tabix_vcf_ch)
 	.mix(varscan_bzip_tabix_vcf_ch)
 	.mix(ivar_bzip_tabix_vcf_ch)
+        .mix(lofreq_bzip_tabix_vcf_ch)
+	.mix(cliquesnv_bzip_tabix_vcf_ch)
 
     output:
     file("*.vcf.gz*") into jbrowse_vcf_ch
 
+    when:
+    false
+
     script:
     """
-    module load $HTSLIB
-    module load $PYPAIRIX
     bgzip -c ${vcf} > ${vcf}.gz
     tabix -p vcf ${vcf}.gz
     """
 }
+
+/* Collect all the pair_ids and send them to pair_id_list_ch for use in jbrowse.
+ */
+pair_id_ch.collectFile(storeDir: "${params.out}/reports") { item ->
+       [ "sample_ids.txt", item + '\n' ]
+}.tap{pair_id_list_ch}
 
 process jbrowse{
     cache false
@@ -820,20 +732,17 @@ process jbrowse{
     publishDir "${params.out}/trackList", mode:'copy'
 
     input:
-    val pair_ids from jbrowse_pair_id_ch.collect()
     file '*' from jbrowse_bw_ch.collect()
     file '*' from jbrowse_bam_ch.collect()
     file '*' from jbrowse_vcf_ch.collect()
-
-    output:
-    file '*.json' into trackList_ch
+    file(pair_id_list) from pair_id_list_ch
 
     when:
-    params.do_sim_reads
+    false
 
     script:
     """
-    copy-data-to-jbrowse.sh "${pair_ids}" $params.fcid
+    cgsb_upload2jbrowse -p MAD -d $params.fcid -s $pair_id_list -f . $ref
     """
 }
 
@@ -853,6 +762,8 @@ process compare_afs{
 	//.mix(tims_nb_vcf_ch)
 	.mix(hc_vcf_ch)
 	.mix(varscan_vcf_ch)
+        .mix(lofreq_vcf_ch)
+        .mix(cliquesnv_vcf_ch)
 
     output:
     file("${pair_id}_af_report.csv") into make_af_csv_output
@@ -865,20 +776,13 @@ process compare_afs{
     golden_vcf=pair_id + "_golden.vcf"
     """
     # need to bzip and index the vcf for bcftools
-    module purge
-    module load $HTSLIB
-    module load $PYPAIRIX
     bgzip -c ${golden_vcf} > ${golden_vcf}.gz
     tabix -p vcf ${golden_vcf}.gz
     bgzip -c ${workflow_vcf} > ${workflow_vcf}.gz
     tabix -p vcf ${workflow_vcf}.gz
 
-    module purge
-    module load $BCFTOOLS
     bcftools isec -c none ${golden_vcf}.gz ${workflow_vcf}.gz -p isec
 
-    module purge
-    module load $PYSAM
     compare_afs.py --golden_vcf ${golden_vcf}.gz --workflow_vcf ${workflow_vcf}.gz --out ${pair_id}_af_report
     """
 }
@@ -901,6 +805,9 @@ process qc {
     output:
     file("${sample_id}_report.csv") into parse_metrics_output
 
+    when:
+    false
+
     script:
     """
     parse_metrics.sh ${sample_id} > ${sample_id}_report.csv 
@@ -911,5 +818,21 @@ process qc {
  * Below we compile these into a single report.
  * Same for af_csv files
  */
-parse_metrics_output.collectFile(name: "${workflow.runName}_report.csv", keepHeader: true, storeDir: "${params.out}/reports")
-make_af_csv_output.collectFile(name: "${workflow.runName}_af_data.csv", keepHeader: true, storeDir: "${params.out}/reports")
+//parse_metrics_output.collectFile(name: "${workflow.runName}_report.csv", keepHeader: true, storeDir: "${params.out}/reports")
+make_af_csv_output.collectFile(name: "${workflow.runName}_af_data.csv", keepHeader: true, storeDir: "${params.out}/reports").tap{af_report_in}
+
+process analyze_af_report {
+    publishDir "${params.out}/reports", mode:'copy'	
+
+    input:
+    file(af_report) from af_report_in
+    file(golden_vcf) from analyze_af_report_vcf.take(1)
+
+    output:
+    file("*") into analyze_af_repot_out
+
+    script:
+    """
+    R -e "af_report = '${af_report}'; golden_vcf = '${golden_vcf}'; rmarkdown::render('/scratch/mk5636/mad_git_testing/bin/analyze_af_report.Rmd')"
+    """
+}
