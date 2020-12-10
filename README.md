@@ -15,6 +15,8 @@ Download and edit the following parameters in the config file (nextflow.config)
 
 `params.ref`: path to reference genome fasta. BWA index, fasta index, and picard reference dictionary must exist in the same dir.
 
+`params.fcid`: unique name for this analysis (alphanumeric, no spaces)
+
 `params.outdir`: output path
 
 `params.mut_model_vcf`: path to VCF file to build mutation model
@@ -25,9 +27,9 @@ Download and edit the following parameters in the config file (nextflow.config)
 
 `params.readsim_model_bam`: Bam file for modeling
 
-`params.mut_rate`: mutation rate (default: 0.45%)
+`params.mut_rate`: mutation rate (between 0 and 1)
 
-`params.readsim_cov`: Simulation coverage (default: 10000)
+`params.readsim_cov`: Simulation coverage
 
 `params.readsim_downsample_fracs`: Simulation downsampling fractions [random seed, fraction]
 
