@@ -306,13 +306,14 @@ process markDuplicatesSpark  {
 
     script:
     """
-    mkdir -p $params.tmpdir/$workflow.runName/$sample_id
-    gatk --java-options "-Djava.io.tmpdir=${params.tmpdir}/${workflow.runName}/${sample_id}" \
+    #mkdir -p $params.tmpdir/$workflow.runName/$sample_id
+    #gatk --java-options "-Djava.io.tmpdir=${params.tmpdir}/${workflow.runName}/${sample_id}"
+    gatk \
 	MarkDuplicatesSpark \
 	-I ${bam} \
 	-M ${sample_id}_dedup_metrics.txt \
 	-O ${sample_id}_sorted_dedup.bam
-    rm -r $params.tmpdir/$workflow.runName/$sample_id
+    #rm -r $params.tmpdir/$workflow.runName/$sample_id
     """ 
 }
 
@@ -830,8 +831,10 @@ process analyze_af_report {
     output:
     file("*") into analyze_af_repot_out
 
+    when:false
+
     script:
     """
-    R -e "af_report = '${af_report}'; golden_vcf = '${golden_vcf}'; rmarkdown::render('/scratch/mk5636/mad_git_testing/bin/analyze_af_report.Rmd')"
+    R -e "af_report = '${af_report}'; golden_vcf = '${golden_vcf}'; rmarkdown::render('analyze_af_report.Rmd')"
     """
 }
