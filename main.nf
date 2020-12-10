@@ -243,7 +243,7 @@ process trim {
 	${pair_id}.unpair_trimmed_1.fq.gz \
 	${pair_id}_trimmed_2.fq.gz \
 	${pair_id}.unpair_trimmed_2.fq.gz \
-	ILLUMINACLIP:${params.adapters}:2:30:10:8:true \
+	#ILLUMINACLIP:${params.adapters}:2:30:10:8:true \
 	LEADING:20 TRAILING:20 SLIDINGWINDOW:4:20 MINLEN:20
     """
 }
