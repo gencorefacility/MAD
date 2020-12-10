@@ -3,12 +3,23 @@
 import sys
 import random
 import numpy as np
+import pysam
+import os
+from pyfaidx import Fasta
 
 # give it a vcf file
 in_vcf = sys.argv[1]
 
+# give it a ref fa
+
+fa = sys.argv[2]
+
 # give it an AF
-in_af = sys.argv[2]
+in_af = sys.argv[3]
+
+vcf = pysam.VariantFile(in_vcf, "r")
+assembly = os.path.basename(fa)
+contigs = Fasta(fa)
 
 def get_af(af):
 	if af == 'random':
@@ -26,7 +37,8 @@ def get_af(af):
 			print("AF cannot be greater than 1! AF = ", af)
 			sys.exit()
 		return float(af)
-	
+
+contigs_added = False	
 with open(in_vcf, 'r') as vcf:
 	for line in vcf:
 		if line.startswith('#'):
@@ -34,6 +46,12 @@ with open(in_vcf, 'r') as vcf:
 				print(line.strip() + "\tFORMAT\tsample")
 			else:
 				print(line.strip())
+
+			## Add Contigs Here (needed by ReSeq)
+			if not contigs_added:
+				for key in contigs.keys():
+					print("##contig=<ID={},length={},assembly={}>".format(key,len(contigs[key]),assembly))
+				contigs_added = True
 		else:
 			columns = line.split('\t')
 			pos = columns[1]

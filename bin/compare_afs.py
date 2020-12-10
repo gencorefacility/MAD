@@ -35,7 +35,7 @@ def main():
 
 	for pos in false_negatives:
 		data = get_data_golden(vcf_golden, pos)
-		print(data)
+		#print(data)
 		results.append({
 			'sample_id': sample_id, 
 			'pos': pos, 
@@ -94,18 +94,31 @@ def get_positions_from_vcf(vcf):
 def get_data_workflow(vcf, pos):
 	# Parse data from variant caller VCFs
 	# assumes only 1 variant at this position, takes first one
-	var = list(vcf.fetch('SARS-CoV2', pos - 1, pos))[0]
+	var = list(vcf.fetch(vcf.get_reference_name(0), pos - 1, pos))[0]
+	# Set dp = None as default
+	dp = None
 	for sample in var.samples:
 		ad = var.samples[sample]['AD']
 		dp = int(var.samples[sample]['DP'])
-	if len(ad) > 2:
-		print("WARNING: Multiallelic variant at {} in workflow vcf. Currently only looking at 1st alt allele"
-			.format(pos))
-	af_workflow = int(ad[1]) / dp
+
+	# Get AF directly from INFO AF field for some tools
+	use_af_tool_list = ['varscan', 'ivar', 'tim', 'cliquesnv.vcf', 'lofreq.vcf']
+	if any(x in vcf.filename.decode() for x in use_af_tool_list):
+		info_af = var.info["AF"]
+		if type(info_af) is tuple:
+			af_workflow = round(float(var.info["AF"][0]),2)
+		elif type(info_af) in [float, str]:
+			af_workflow = round(float(var.info["AF"]),2)
+	else:
+		for sample in var.samples:
+	                ad = var.samples[sample]['AD']
+        	        dp = int(var.samples[sample]['DP'])
+		af_workflow = int(ad[1]) / dp
+	
 	return {"af": af_workflow, "dp": dp, "ref": var.ref, "alt": var.alts[0]}
 
 def get_data_golden(vcf, pos):
-        var = list(vcf.fetch('SARS-CoV2', pos - 1, pos))[0]
+        var = list(vcf.fetch(vcf.get_reference_name(0), pos - 1, pos))[0]
         for sample in var.samples:
                 dp = int(var.samples[sample]['DP'])
         af_golden = round(float(var.info["AF"][0]),2)

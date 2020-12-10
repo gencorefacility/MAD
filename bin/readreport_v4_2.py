@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 import sys,os,glob
 import numpy as np
 from scipy.stats.distributions import binom
@@ -360,7 +360,7 @@ def open_fasta(filename):
 	segdict = {}
 	with open(filename) as fp:
 		for name, seq in read_fasta(fp):
-			segdict[name[1:]] = seq
+			segdict[name.split(' ')[0][1:]] = seq
 	return segdict
 
 
