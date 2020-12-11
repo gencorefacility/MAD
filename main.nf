@@ -823,16 +823,16 @@ process analyze_af_report {
     publishDir "${params.out}/reports", mode:'copy'	
 
     input:
+    file notebook from Channel.fromPath("bin/analyze_af_report.Rmd")
     file(af_report) from af_report_in
     file(golden_vcf) from analyze_af_report_vcf.take(1)
 
     output:
-    file("*") into analyze_af_repot_out
-
-    when:false
+    file("*.html") into analyze_af_repot_out
 
     script:
     """
-    R -e "af_report = '${af_report}'; golden_vcf = '${golden_vcf}'; rmarkdown::render('analyze_af_report.Rmd')"
+    cp ${notebook} MAD_report.Rmd
+    R -e "af_report = '${af_report}'; golden_vcf = '${golden_vcf}'; rmarkdown::render('MAD_report.Rmd')"
     """
 }
