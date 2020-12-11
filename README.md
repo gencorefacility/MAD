@@ -13,13 +13,13 @@ All required software is packaged in a docker container available at: https://hu
 ## Running the pipeline:
 Clone the git repository and edit the following parameters in the nextflow.config file:
 
-`params.ref`: path to reference genome fasta. BWA index, fasta index, and picard reference dictionary must exist in the same dir.
+`params.ref`: Path to reference genome fasta. BWA index, fasta index, and picard reference dictionary must exist in the same dir.
 
-`params.fcid`: unique name for this analysis (alphanumeric, no spaces)
+`params.fcid`: Unique name for this analysis (alphanumeric, no spaces)
 
-`params.outdir`: output path
+`params.outdir`: Output path
 
-`params.mut_model_vcf`: path to VCF file to build mutation model
+`params.mut_model_vcf`: Path to VCF file to build mutation model
 
 `params.error_model_fq_read1`: Read 1 of paired end fastq reads for error model
 
@@ -27,7 +27,7 @@ Clone the git repository and edit the following parameters in the nextflow.confi
 
 `params.readsim_model_bam`: Bam file for modeling
 
-`params.mut_rate`: mutation rate (between 0 and 1)
+`params.mut_rate`: Mutation rate (between 0 and 1)
 
 `params.readsim_cov`: Simulation coverage
 
@@ -36,9 +36,9 @@ Clone the git repository and edit the following parameters in the nextflow.confi
 `params.readsim_allele_fracs`: Simulation allele frequencies
 
 
-`process`: configuration for scheduler. Replace 'slurm' with execution scheduler. Resources required will vary greatly depending on input, however reasonable defaults have been provided by default. 
+`process`: Configuration for scheduler. Replace 'slurm' with execution scheduler. Resources required will vary greatly depending on input, however reasonable defaults have been provided by default. 
 
-Run the `main.nf` script, providing the path to the config, and specifying the -with-docker or -with-singularity parameter along with the docker repo:
+Run the main.nf script, providing the path to the config, and specifying the -with-docker or -with-singularity parameter along with the docker repo:
 
 `nextflow run main.nf -c <path_to_config> -with-docker gencorefacility/mad:1`
 
