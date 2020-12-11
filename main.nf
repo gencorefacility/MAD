@@ -823,7 +823,7 @@ process analyze_af_report {
     publishDir "${params.out}/reports", mode:'copy'	
 
     input:
-    file notebook from Channel.fromPath("bin/analyze_af_report.Rmd")
+    file notebook from Channel.fromPath("$NXF_ASSETS/gencorefacility/mad/bin/analyze_af_report.Rmd")
     file(af_report) from af_report_in
     file(golden_vcf) from analyze_af_report_vcf.take(1)
 
