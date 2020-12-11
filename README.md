@@ -10,8 +10,8 @@ Nextflow v20.07.1
 ## Docker: 
 All required software is packaged in a docker container available at: https://hub.docker.com/r/gencorefacility/mad
 
-## Config:
-Download and edit the following parameters in the config file (nextflow.config)
+## Running the pipeline:
+Clone the git repository and edit the following parameters in the nextflow.config file:
 
 `params.ref`: path to reference genome fasta. BWA index, fasta index, and picard reference dictionary must exist in the same dir.
 
@@ -38,12 +38,11 @@ Download and edit the following parameters in the config file (nextflow.config)
 
 `process`: configuration for scheduler. Replace 'slurm' with execution scheduler. Resources required will vary greatly depending on input, however reasonable defaults have been provided by default. 
 
-## Running the Pipeline:
-Call the pipeline directly from github using nextflow, providing the path to the config, and specifying the -with-docker or -with-singularity parameter along with the docker repo.
+Run the `main.nf` script, providing the path to the config, and specifying the -with-docker or -with-singularity parameter along with the docker repo:
 
-`nextflow run gencorefacility/mad -c <path_to_config> -with-docker gencorefacility/mad:1`
+`nextflow run main.nf -c <path_to_config> -with-docker gencorefacility/mad:1`
 
 ## Output:
-An HTML report summarizing the results will be stored in `params.outdir/out/reports`
+An HTML report summarizing the results will be stored in `params.outdir/out/reports/MAD_report.html`
 
 
