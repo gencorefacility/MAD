@@ -828,7 +828,7 @@ process analyze_af_report {
     file(golden_vcf) from analyze_af_report_vcf.take(1)
 
     output:
-    file("*.html") into analyze_af_repot_out
+    file("*.html") into analyze_af_report_out
 
     script:
     """
