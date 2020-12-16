@@ -1,8 +1,6 @@
 ---
 title: "Variants_AllCallers"
-output: 
-    html_document:
-        keep_md: true
+output: html_notebook
 ---
 
 ##This notebook takes the output for the MAF Pipeline (mycsvfile.csv) and does:
@@ -15,8 +13,8 @@ For viral variant callers!
 ##Loading Libraries
 ```{r}
 library('ggplot2')
-library('plyr')
 library('tidyverse')
+library('plyr')
 library('ggpubr')
 library("MLmetrics")
 
@@ -83,40 +81,22 @@ TsTv = function(dataframe) {
 
 ##Reading in Variant Data and Evaluating
 ```{r}
-
 AV = read.csv(af_report,header = T)
 AV$sample_id = as.character(AV$sample_id)
 AV$dp = as.numeric(AV$dp)
 AV = separate(AV, sample_id, sep = "_", 
-               into = c("pipe","AF","allele_freq","frac","seq_depth","tool","parameter")) %>%
-  select(-c(pipe, AF, frac)) %>% 
+               into = c(NA,NA,"allele_freq",NA,"seq_depth","tool","parameter"))%>% 
   filter(ref == "A" | ref == "C" | ref == "T" | ref == "G") %>% 
   filter(alt == "A" | alt == "C" | alt == "T" | alt == "G") %>% droplevels()
 AV$seq_depth = as.numeric(AV$seq_depth)
 AV$coverage = (AV$seq_depth * 100000)
 
-
-AV_ivar = filter(AV, tool == "ivar") %>% droplevels()
-AV_lofreq = filter(AV, tool == "lofreq") %>% droplevels()
-AV_varscan_unfiltered = filter(AV, tool == "varscan" & parameter == "unfiltered") %>% droplevels()
-#AV_varscan_unfiltered$tool = paste0(AV_varscan_unfiltered$tool,"_",AV_varscan_unfiltered$parameter)
-AV_varscan_filtered = filter(AV, tool == "varscan"& parameter == "filtered") %>% droplevels()
-#AV_varscan_filtered$tool = paste0(AV_varscan_filtered$tool,"_",AV_varscan_filtered$parameter)
-AV_tims = filter(AV, tool == "tims") %>% droplevels()
-AV_freebayes = filter(AV, tool == "freebayes") %>% droplevels()
-AV_mutect = filter(AV, tool == "mutect2") %>% droplevels()
-AV_haplotypecaller = filter(AV, tool == "filtered") %>% droplevels()
-AV_haplotypecaller$tool = "haplotypecaller"
-
-AV = rbind(AV_ivar,AV_varscan_filtered,AV_tims,
-           AV_freebayes,AV_mutect,AV_haplotypecaller,AV_lofreq)
 AV$parameter = NULL
 head(AV)
 
 Dp_Variation = ggplot(AV, aes(x = log10(coverage), y = log10(dp), color = tool)) +
   geom_point() + 
   facet_wrap(~tool, scales = "free_y") +
-  geom_abline() +
   scale_color_manual(values = MyColors)
 print(Dp_Variation)
 ggsave(Dp_Variation, file = "AV_Dp_Coverage.png")
@@ -176,17 +156,12 @@ head(AllVar)
 AV_randomAF = filter(AV, allele_freq == "random") %>% droplevels()
 
 AV_randomAF_falsepos = filter(AV_randomAF, af_golden == 0 & af_workflow != 0) %>% droplevels()
-  if (NROW(AV_randomAF_falsepos) > 0){
-	AV_randomAF_falsepos$category = c("FP")
-  }
+  AV_randomAF_falsepos$category = c("FP")
 AV_randomAF_falseneg = filter(AV_randomAF, af_workflow == 0 & af_golden != 0) %>% droplevels()
-  if (NROW(AV_randomAF_falseneg) > 0){
-	AV_randomAF_falseneg$category = c("FN")
-  }
+  AV_randomAF_falseneg$category = c("FN")
 AV_randomAF_truepos = filter(AV_randomAF, af_golden != 0 & af_workflow != 0)
-  if (NROW(AV_randomAF_truepos) > 0){
-	AV_randomAF_truepos$category = c("TP")
-  }
+  AV_randomAF_truepos$category = c("TP")
+  
 AV_randomAF = rbind(AV_randomAF_truepos, AV_randomAF_falseneg, AV_randomAF_falsepos)
 
 rFP_All = group_by(AV_randomAF_falsepos, allele_freq,coverage,tool) %>% tally()
@@ -245,40 +220,17 @@ write.csv(AllVar_PR_highest, file = "AllVar_PR_Thresholds.csv")
 
 #2.1 SetAF - Proportion of Variants Found
 ```{r}
-#AV_setAF_counts = group_by(AV_setAF_truepos, tool, allele_freq, coverage) %>% tally()
-#AV_setAF_counts$proportion = (AV_setAF_counts$n / nrow(viral_golden))
+AV_setAF_counts = group_by(AV_setAF_truepos, tool, allele_freq, coverage) %>% tally()
+AV_setAF_counts$proportion = (AV_setAF_counts$n / nrow(viral_golden))
 
-#AV_setAF_proportion = ggplot(AV_setAF_counts,aes(x = log10(coverage), y = proportion,
-#                                                group = tool, color = tool)) +
-#  geom_point() +
-#  geom_line() +
-#  facet_grid(~allele_freq) +
-#  scale_color_manual(values = MyColors) #+
-#  #theme(axis.text = element_text(size = 8),
-#        #axis.title = element_text(size = 30),
-#        #strip.text = element_text(size = 15),
-#        #axis.text.x = element_text(angle = 40))
-#print(AV_setAF_proportion)
-#ggsave("AllVarSet_Proportion.png", AV_setAF_proportion)
-
-## Only looking at coverage between 100-1000
-#AV_setAF_truepos_f = filter(AV_setAF_truepos, coverage > 99 & coverage < 1001)
-#AV_setAF_counts_f = group_by(AV_setAF_truepos_f, tool, allele_freq, coverage) %>% tally()
-#AV_setAF_counts_f$proportion = (AV_setAF_counts_f$n / nrow(viral_golden))
- 
-#AV_setAF_proportion_f = ggplot(AV_setAF_counts_f,aes(x = log10(coverage), y = proportion, group = tool, color = tool)) +
-#  geom_point() +
-#  geom_line() +
-#  facet_grid(~allele_freq) +
-#  scale_color_manual(values = MyColors) +
-#  #scale_x_continuous(breaks = c(100,200,300,400,500,600,700,800,900,1000), 
-#                   #labels = c("100","200","300","400","500","600","700","800","900","1000"))  +
-#  theme(axis.text.x = element_text(angle = 90))
-#        #axis.text = element_text(size = 8),
-#        #axis.title = element_text(size = 30),
-#        #strip.text = element_text(size = 15),
-#print(AV_setAF_proportion_f)
-#ggsave("AllVarSet_Proportion_Filtered.png", AV_setAF_proportion_f)
+AV_setAF_proportion = ggplot(AV_setAF_counts,aes(x = log10(coverage), y = proportion,
+                                                group = tool, color = tool)) +
+  geom_point() +
+  geom_line() +
+  facet_grid(~allele_freq) +
+  scale_color_manual(values = MyColors)
+print(AV_setAF_proportion)
+ggsave("AllVarSet_Proportion.png", AV_setAF_proportion)
 ```
 
 #2.2 RandomAF - Proportion of Variants Found
@@ -290,11 +242,7 @@ AV_randomAF_proportion = ggplot(AV_randomAF_counts, aes(x = log10(coverage), y =
                                                         group = tool, color = tool)) +
   geom_point() +
   geom_line() +
-  scale_color_manual(values = MyColors) #+
-  #theme(axis.text = element_text(size = 8),
-        #axis.title = element_text(size = 30),
-        #strip.text = element_text(size = 15),
-        #axis.text.x = element_text(angle = 40))
+  scale_color_manual(values = MyColors)
 print(AV_randomAF_proportion)
 ggsave("AllVarRandom_Proportion.png", AV_randomAF_proportion)
  
@@ -307,13 +255,7 @@ AV_randomAF_proportion_f = ggplot(AV_randomAF_counts_f, aes(x = log10(coverage),
                                                              group = tool, color = tool)) +
   geom_point() +
   geom_line() +
-  scale_color_manual(values = MyColors) #+
-  #scale_x_continuous(breaks = c(100,200,300,400,500,600,700,800,900,1000), 
-                   #labels = c("100","200","300","400","500","600","700","800","900","1000"))  +
-  #theme(axis.text = element_text(size = 8),
-        #axis.title = element_text(size = 30),
-        #strip.text = element_text(size = 15),
-        #axis.text.x = element_text(angle = 40))
+  scale_color_manual(values = MyColors)
 print(AV_randomAF_proportion_f)
 ggsave("AllVarRandom_Proportion_Filtered.png", AV_randomAF_proportion_f)
 ```
@@ -321,98 +263,69 @@ ggsave("AllVarRandom_Proportion_Filtered.png", AV_randomAF_proportion_f)
 #3.1 SetAF - Correlation Between Golden and Workflow
 ```{r}
 ## Only looking at true positives
-#AV_Corr_setAF = ggplot(AV_setAF, aes(x = af_golden, y = af_workflow,
-#                                                color = tool, shape = category)) +
-#  geom_point() +
-#  scale_color_manual(values = MyColors) +
-#  geom_boxplot(aes(group = allele_freq)) + 
-#  facet_grid(tool~coverage) +
-#  #theme(axis.text = element_text(size = 8), 
-#        #axis.title = element_text(size = 20), 
-#        #strip.text = element_text(size = 15),
-#        #axis.text.x = element_text(angle = 40)) +
-#  ylim(-0.001,1.0) + xlim(-0.001,1.0)
-#print(AV_Corr_setAF)
-#ggsave("AllVarSet_Correlation.png",AV_Corr_setAF)
+AV_Corr_setAF = ggplot(AV_setAF, aes(x = af_golden, y = af_workflow,
+                                                color = tool, shape = category)) +
+  geom_point() +
+  scale_color_manual(values = MyColors) +
+  geom_boxplot(aes(group = allele_freq)) + 
+  facet_grid(tool~coverage) +
+  ylim(-0.001,1.0) + xlim(-0.001,1.0)
+print(AV_Corr_setAF)
+ggsave("AllVarSet_Correlation.png",AV_Corr_setAF)
 
 ##Looking at all SetAF Data
-#AV_setAF_f = filter(AV_setAF, coverage > 99 & coverage < 1001)
+AV_Corr_setAF = ggplot(AV_setAF, aes(x = af_golden, y = af_workflow, 
+                                       color = tool, group = tool, shape = category)) +
+  geom_point(size = 3, alpha = 0.4) +
+  scale_color_manual(values = MyColors) +
+  facet_grid(~coverage) +
+  geom_smooth(method='lm', size = 1.5) +
+  ylim(-0.001,1.0) + xlim(-0.001,1.0)
+print(AV_Corr_setAF)
+ggsave("AllVarSet_Correlation_Filtered.png",AV_Corr_setAF)
 
-#AV_Corr_setAF = ggplot(AV_setAF_f, aes(x = af_golden, y = af_workflow, 
-#                                       color = tool, group = tool, shape = category)) +
-#  geom_point(size = 3, alpha = 0.4) +
-#  scale_color_manual(values = MyColors) +
-#  facet_grid(~coverage) +
-#  geom_smooth(method='lm', size = 1.5) +
-#  #theme(axis.text = element_text(size = 8), 
-#        #axis.title = element_text(size = 20), 
-#        #strip.text = element_text(size = 15),
-#        #axis.text.x = element_text(angle = 40)) +
-#  ylim(-0.001,1.0) + xlim(-0.001,1.0)
-#print(AV_Corr_setAF)
-#ggsave("AllVarSet_Correlation_Filtered.png",AV_Corr_setAF)
-
-#AV_Corr_setAF_Zoom = ggplot(AV_setAF_f, aes(x = af_golden, y = af_workflow,
-#                                            color = tool, group = tool, shape = category)) +
-#  geom_point(size = 3, alpha = 0.4) +
-#  scale_color_manual(values = MyColors) +
-#  facet_grid(~coverage) +
-#  geom_smooth(method='lm', size = 1.5) +
-#  #theme(axis.text = element_text(size = 8), 
-#        #axis.title = element_text(size = 20), 
-#        #strip.text = element_text(size = 15),
-#        #axis.text.x = element_text(angle = 40)) +
-#  ylim(-0.01,0.15) + xlim(-0.01,0.15)
-#print(AV_Corr_setAF_Zoom)
-#ggsave("AllVarSet_CorrelationF_Filtered_Zoom.png", AV_Corr_setAF_Zoom)
+AV_Corr_setAF_Zoom = ggplot(AV_setAF, aes(x = af_golden, y = af_workflow,
+                                            color = tool, group = tool, shape = category)) +
+  geom_point(size = 3, alpha = 0.4) +
+  scale_color_manual(values = MyColors) +
+  facet_grid(~coverage) +
+  ylim(-0.01,0.15) + xlim(-0.01,0.15)
+print(AV_Corr_setAF_Zoom)
+ggsave("AllVarSet_CorrelationF_Filtered_Zoom.png", AV_Corr_setAF_Zoom)
 ```
 
 #3.2 RandomAF - Correlation Between Golden and Workflow
 ```{r}
 ## Only looking at true positives
-#AV_Corr_randomAF = ggplot(AV_randomAF, aes(x = af_golden, y = af_workflow,
-#                                                      color = tool, shape = category)) +
-#  geom_point() +
-#  scale_color_manual(values = MyColors) +
-#  facet_grid(tool~coverage) +
-#  #theme(axis.text = element_text(size = 8), 
-#        #axis.title = element_text(size = 20), 
-#        #strip.text = element_text(size = 15),
-#        #axis.text.x = element_text(angle = 40)) +
-#  ylim(-0.001,1.0) + xlim(-0.001,1.0)
-#print(AV_Corr_randomAF)
-#ggsave("AllVarRandom_Correlation.png",AV_Corr_randomAF)
+AV_Corr_randomAF = ggplot(AV_randomAF, aes(x = af_golden, y = af_workflow,
+                                                      color = tool, shape = category)) +
+  geom_point() +
+  scale_color_manual(values = MyColors) +
+  facet_grid(tool~coverage) +
+  ylim(-0.001,1.0) + xlim(-0.001,1.0)
+print(AV_Corr_randomAF)
+ggsave("AllVarRandom_Correlation.png",AV_Corr_randomAF)
 
 ##Looking at all RandomAF Data
-#AV_randomAF_f = filter(AV_randomAF, coverage > 99 & coverage < 1001)
+AV_Corr_randomAF = ggplot(AV_randomAF, aes(x = af_golden, y = af_workflow, 
+                                             color = tool, group = tool, shape = category)) +
+  geom_point(size = 3, alpha = 0.4) +
+  scale_color_manual(values = MyColors) +
+  facet_grid(~coverage) +
+  geom_smooth(method='lm', size = 1.5) +
+  ylim(-0.01,1) + xlim(-0.01,1)
+print(AV_Corr_randomAF)
+ggsave("AllVarRandom_Correlation_Filtered.png",AV_Corr_randomAF)
 
-#AV_Corr_randomAF = ggplot(AV_randomAF_f, aes(x = af_golden, y = af_workflow, 
-#                                             color = tool, group = tool, shape = category)) +
-#  geom_point(size = 3, alpha = 0.4) +
-#  scale_color_manual(values = MyColors) +
-#  facet_grid(~coverage) +
-#  geom_smooth(method='lm', size = 1.5) +
-#  #theme(axis.text = element_text(size = 8), 
-#        #axis.title = element_text(size = 20), 
-#        #strip.text = element_text(size = 15),
-#        #axis.text.x = element_text(angle = 40)) +
-#  ylim(-0.01,1) + xlim(-0.01,1)
-#print(AV_Corr_randomAF)
-#ggsave("AllVarRandom_Correlation_Filtered.png",AV_Corr_randomAF)
-
-#AV_Corr_randomAF_Zoom = ggplot(AV_randomAF_f, aes(x = af_golden, y = af_workflow,
-#                                                  color = tool, group = tool, shape = category)) +
-#  geom_point(size = 3, alpha = 0.4) +
-#  scale_color_manual(values = MyColors) +
-#  facet_grid(~coverage) +
-#  geom_smooth(method='lm', size = 1.5) +
-#  #theme(axis.text = element_text(size = 8), 
-#        #axis.title = element_text(size = 20), 
-#        #strip.text = element_text(size = 15),
-#        #axis.text.x = element_text(angle = 40)) +
-#  ylim(-0.01,0.15) + xlim(-0.01,0.15)
-#print(AV_Corr_randomAF_Zoom)
-#ggsave("AllVarRandom_Correlation_Filtered_Zoom.png", AV_Corr_randomAF_Zoom)
+AV_Corr_randomAF_Zoom = ggplot(AV_randomAF, aes(x = af_golden, y = af_workflow,
+                                                  color = tool, group = tool, shape = category)) +
+  geom_point(size = 3, alpha = 0.4) +
+  scale_color_manual(values = MyColors) +
+  facet_grid(~coverage) +
+  geom_smooth(method='lm', size = 1.5) +
+  ylim(-0.01,0.15) + xlim(-0.01,0.15)
+print(AV_Corr_randomAF_Zoom)
+ggsave("AllVarRandom_Correlation_Filtered_Zoom.png", AV_Corr_randomAF_Zoom)
 ```
 
 ## Stats for SetAF Data
@@ -467,22 +380,22 @@ ggsave("RandomAF_CoeffVar_AlleleFrequency.png",CoeffVar_randomAF)
 
 #4. Look at how each tool compares at each AF and seq-depth
 ```{r}
-#AVSet_Corr = ggplot(AV_setAF_truepos, aes(x = tool, y = af_workflow)) + 
-#  geom_point() +
-#  geom_boxplot() +
-#  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-#  facet_grid(allele_freq~coverage, scales = "free_y")
-#print(AVSet_Corr)
-#ggsave("AllVarSet_Tool_Comparison.pdf", AVSet_Corr, width = 15, height = 20)
+AVSet_Corr = ggplot(AV_setAF_truepos, aes(x = tool, y = af_workflow)) + 
+  geom_point() +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  facet_grid(allele_freq~coverage, scales = "free_y")
+print(AVSet_Corr)
+ggsave("AllVarSet_Tool_Comparison.pdf", AVSet_Corr, width = 15, height = 20)
 # y axes are set per row at the moment (scales = "free_y")
 
-#AVRandom_Corr = ggplot(AV_randomAF_truepos, aes(x = tool, y = af_workflow)) + 
-#  geom_point() +
-#  geom_violin() +
-#  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-#  facet_grid(allele_freq~coverage)
-#print(AVRandom_Corr)
-#ggsave("AllVarRandom_Tool_Comparison.pdf", AVRandom_Corr, width = 15, height = 20)
+AVRandom_Corr = ggplot(AV_randomAF_truepos, aes(x = tool, y = af_workflow)) + 
+  geom_point() +
+  geom_violin() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  facet_grid(allele_freq~coverage)
+print(AVRandom_Corr)
+ggsave("AllVarRandom_Tool_Comparison.pdf", AVRandom_Corr, width = 15, height = 20)
 ```
 
 #5.1. Looks at where the SNPS are located throughout the genome
@@ -512,16 +425,16 @@ print(AV_Pos_falseneg_r)
 
 #5.2.Transitions/Transversions
 ```{r}
-#setAF_TP_pos = ggplot(AV_setAF_truepos, aes(x = pos, y = ref, color = tool, shape = alt)) +
-#  geom_point()
-#print(setAF_TP_pos)
+setAF_TP_pos = ggplot(AV_setAF_truepos, aes(x = pos, y = ref, color = tool, shape = alt)) +
+  geom_point()
+print(setAF_TP_pos)
 
-#TsTv(AV_setAF_truepos)
+TsTv(AV_setAF_truepos)
 #counts variants from all tools/seq_depth/AF trials
 
-#randomAF_TP_pos = ggplot(AV_randomAF_truepos, aes(x = pos, y = ref, color = tool, shape = alt)) +
-#  geom_point()
-#print(randomAF_TP_pos)
+randomAF_TP_pos = ggplot(AV_randomAF_truepos, aes(x = pos, y = ref, color = tool, shape = alt)) +
+  geom_point()
+print(randomAF_TP_pos)
 
-#TsTv(AV_randomAF_truepos)
+TsTv(AV_randomAF_truepos)
 ```
