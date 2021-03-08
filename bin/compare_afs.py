@@ -33,12 +33,13 @@ def main():
 	
 	sample_id = workflow_vcf.split(".vcf")[0]
 
-	for pos in false_negatives:
-		data = get_data_golden(vcf_golden, pos)
+	for x in false_negatives:
+		data = get_data_golden(vcf_golden, x)
 		#print(data)
 		results.append({
 			'sample_id': sample_id, 
-			'pos': pos, 
+                        'chrom': x[0],
+                        'pos': x[1], 
 			'af_golden': data['af'], 
 			'af_workflow': 0, 
 			'ref': data['ref'], 
@@ -46,11 +47,12 @@ def main():
 			'dp': data['dp']
 		})
 
-	for pos in false_positives:
-		data = get_data_workflow(vcf_workflow, pos)
+	for x in false_positives:
+		data = get_data_workflow(vcf_workflow, x)
 		results.append({
 			'sample_id': sample_id, 
-			'pos': pos, 
+                        'chrom': x[0],
+                        'pos': x[1], 
 			'af_golden': 0, 
 			'af_workflow': data['af'], 
 			'ref': data['ref'], 
@@ -58,12 +60,13 @@ def main():
 			'dp': data['dp']
 		})
 
-	for pos in true_positives:
-		gold_data = get_data_golden(vcf_golden, pos)
-		workflow_data = get_data_workflow(vcf_workflow, pos)
+	for x in true_positives:
+		gold_data = get_data_golden(vcf_golden, x)
+		workflow_data = get_data_workflow(vcf_workflow, x)
 		results.append({
 			'sample_id': sample_id, 
-			'pos': pos, 
+		        'chrom': x[0],	
+                        'pos': x[1], 
 			'af_golden': gold_data['af'], 
 			'af_workflow': workflow_data['af'], 
 			'ref': workflow_data['ref'], 
@@ -88,20 +91,23 @@ def get_positions_from_vcf(vcf):
 	l = []
 	vcf = pysam.VariantFile(vcf, "r")
 	for var in vcf:	
-		l.append(var.pos)
+		l.append([var.contig, var.pos])
 	return l
 
-def get_data_workflow(vcf, pos):
+def get_data_workflow(vcf, x):
 	# Parse data from variant caller VCFs
 	# assumes only 1 variant at this position, takes first one
-	var = list(vcf.fetch(vcf.get_reference_name(0), pos - 1, pos))[0]
+	chrom = x[0]
+	pos = x[1]
+	var = list(vcf.fetch(chrom, pos - 1, pos))[0]
 	# Set dp = None as default
 	dp = None
 	for sample in var.samples:
 		ad = var.samples[sample]['AD']
 		dp = int(var.samples[sample]['DP'])
 
-	# Get AF directly from INFO AF field for some tools
+	# Get AF directly from INFO AF field for some tools if possible
+	# Else, compute using AD/DP
 	use_af_tool_list = ['varscan', 'ivar', 'tim', 'cliquesnv.vcf', 'lofreq.vcf']
 	if any(x in vcf.filename.decode() for x in use_af_tool_list):
 		info_af = var.info["AF"]
@@ -111,18 +117,20 @@ def get_data_workflow(vcf, pos):
 			af_workflow = round(float(var.info["AF"]),2)
 	else:
 		for sample in var.samples:
-	                ad = var.samples[sample]['AD']
-        	        dp = int(var.samples[sample]['DP'])
+			ad = var.samples[sample]['AD']
+			dp = int(var.samples[sample]['DP'])
 		af_workflow = int(ad[1]) / dp
 	
 	return {"af": af_workflow, "dp": dp, "ref": var.ref, "alt": var.alts[0]}
 
-def get_data_golden(vcf, pos):
-        var = list(vcf.fetch(vcf.get_reference_name(0), pos - 1, pos))[0]
-        for sample in var.samples:
-                dp = int(var.samples[sample]['DP'])
-        af_golden = round(float(var.info["AF"][0]),2)
-        return {"af": af_golden, "dp": dp, "ref": var.ref, "alt": var.alts[0]}
+def get_data_golden(vcf, x):
+	chrom = x[0]
+	pos = x[1]
+	var = list(vcf.fetch(chrom, pos - 1, pos))[0]
+	for sample in var.samples:
+		dp = int(var.samples[sample]['DP'])
+	af_golden = round(float(var.info["AF"][0]),2)
+	return {"af": af_golden, "dp": dp, "ref": var.ref, "alt": var.alts[0]}
 
 if __name__ == "__main__":
 	main()
