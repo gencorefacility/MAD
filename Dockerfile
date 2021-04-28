@@ -32,7 +32,8 @@ RUN mkdir -p ${APPS_ROOT}
 
 ###############################################
 # R packages
-RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown','tinytex'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "tinytex::install_tinytex()"
 
 ###############################################
 #BWA = 'bwa/intel/0.7.17'
