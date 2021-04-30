@@ -331,7 +331,7 @@ ENV PATH ${PATH}:${APPS_ROOT}/miniconda/bin/
 
 ###############################################
 # R packages
-RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org')"
+RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
 RUN R -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
 RUN R -e "require(devtools); install_version('tidyr', version = '1.0.0', repos = 'http://cran.us.r-project.org')"
 RUN R -e "require(devtools); install_version('forcats', version = '0.4.0', repos = 'http://cran.us.r-project.org')"
