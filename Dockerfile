@@ -331,17 +331,15 @@ ENV PATH ${PATH}:${APPS_ROOT}/miniconda/bin/
 
 ###############################################
 # R packages
-RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
-RUN R -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
-RUN R -e "require(devtools); install_version('tidyr', version = '1.0.0', repos = 'http://cran.us.r-project.org')"
-RUN R -e "require(devtools); install_version('forcats', version = '0.4.0', repos = 'http://cran.us.r-project.org')"
-RUN R -e "require(devtools); install_version('readr', version = '1.3.1', repos = 'http://cran.us.r-project.org')"
-RUN R -e "require(devtools); install_version('plyr', version = '1.8.5', repos = 'http://cran.us.r-project.org')"
-RUN R -e "require(devtools); install_version('purrr', version = '0.3.3', repos = 'http://cran.us.r-project.org')"
+RUN R -e "install.packages(c('tinytex','devtools','ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "require(devtools); install_version('tidyr', version = '1.0.0', repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "require(devtools); install_version('forcats', version = '0.4.0', repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "require(devtools); install_version('readr', version = '1.3.1', repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "require(devtools); install_version('plyr', version = '1.8.5', repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "require(devtools); install_version('purrr', version = '0.3.3', repos = 'http://cran.us.r-project.org', Ncpus = 6)"
 #RUN R -e "require(devtools); install_version('ggplot2', version = '3.2.1', repos = 'http://cran.us.r-project.org')"
 #RUN R -e "require(devtools); install_version('jsonlite', version = '1.6', repos = 'http://cran.us.r-project.org')"
 #RUN R -e "require(devtools); install_version('tidyverse', version = '1.2.1', repos = 'http://cran.us.r-project.org')"
-RUN R -e "install.packages(c('tinytex'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
 RUN R -e "tinytex::install_tinytex()"
 
 RUN mkdir ${APP_ROOT}/scripts
