@@ -236,7 +236,7 @@ ENV SEQTK_VERSION 1.2
 ENV SEQTK_HOME ${APPS_ROOT}/seqtk/${SEQTK_VERSION}
 ENV PATH ${SEQTK_HOME}:${PATH}
 
-RUN git clone --depth https://github.com/lh3/seqtk.git --branch v${SEQTK_VERSION} ${SEQTK_HOME} \
+RUN git clone --depth 1 https://github.com/lh3/seqtk.git --branch v${SEQTK_VERSION} ${SEQTK_HOME} \
   && make -j -C ${SEQTK_HOME}
 
 ###############################################
