@@ -32,7 +32,8 @@ RUN mkdir -p ${APPS_ROOT}
 
 ###############################################
 # R packages
-RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown','tinytex'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "tinytex::install_tinytex()"
 
 ###############################################
 #BWA = 'bwa/intel/0.7.17'
@@ -275,8 +276,8 @@ ENV NEATGENREADS_VERSION 2.0
 ENV NEATGENREADS_HOME ${APPS_ROOT}/neat-genreads/${NEATGENREADS_VERSION}
 
 RUN yum install -y python2-pip \
-  && pip2 install --upgrade pip \
-  && pip2 install numpy \
+  && pip2 install --upgrade pip==20.3.1 \
+  && pip2 install numpy==1.16.6 \
   && git clone --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
   && echo 'alias genReads.py="python2 ${NEATGENREADS_HOME}/genReads.py"' >> /etc/profile.d/neatgen.sh \
   && echo 'alias mergeJobs.py="python2 ${NEATGENREADS_HOME}/mergeJobs.py"' >> /etc/profile.d/neatgen.sh \
