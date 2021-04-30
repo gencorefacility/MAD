@@ -40,10 +40,6 @@ ENV APPS_ROOT /apps
 RUN mkdir -p ${APPS_ROOT}
 
 ###############################################
-# R packages
-#RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
-
-###############################################
 #BWA = 'bwa/intel/0.7.17'
 
 ENV BWA_VERSION 0.7.17
@@ -240,14 +236,19 @@ RUN git clone --depth 1 https://github.com/lh3/seqtk.git --branch v${SEQTK_VERSI
   && make -j -C ${SEQTK_HOME}
 
 ###############################################
-#FREEBAYES = 'freebayes/intel/1.1.0'
+#FREEBAYES = 'freebayes/intel/1.3.1'
 
-ENV FREEBAYES_VERSION 1.1.0
+ENV FREEBAYES_VERSION 1.3.1
 ENV FREEBAYES_HOME ${APPS_ROOT}/freebayes/${FREEBAYES_VERSION}
 ENV PATH ${FREEBAYES_HOME}/bin:${PATH}
 
-RUN git clone --depth 1 --branch v${FREEBAYES_VERSION} --recursive git://github.com/ekg/freebayes.git ${FREEBAYES_HOME} \
-  && make -C ${FREEBAYES_HOME}
+#RUN git clone --depth 1 --branch v${FREEBAYES_VERSION} --recursive git://github.com/ekg/freebayes.git ${FREEBAYES_HOME} \
+#  && make -C ${FREEBAYES_HOME}
+
+RUN mkdir -p ${FREEBAYES_HOME}/bin/ \
+  && wget https://github.com/freebayes/freebayes/releases/download/v${FREEBAYES_VERSION}/freebayes-v${FREEBAYES_VERSION} -O ${FREEBAYES_HOME}/bin/freebayes \
+  && chmod +x ${FREEBAYES_HOME}/bin/freebayes
+
   
 ###############################################
 #VARSCAN = 'varscan/2.4.2'
@@ -322,11 +323,14 @@ ENV PATH ${PATH}:${LOFREQ_STAR_HOME}/bin
 
 RUN wget https://github.com/CSB5/lofreq/raw/master/dist/lofreq_star-${LOFREQ_STAR_VERSION}_linux-x86-64.tgz \
   && tar -zxvf lofreq_star-${LOFREQ_STAR_VERSION}_linux-x86-64.tgz \
-	&& mkdir -p ${LOFREQ_STAR_HOME} \
-	&& mv ./lofreq_star-2.1.3.1/bin  ${LOFREQ_STAR_HOME}/ 
-	
+  && mkdir -p ${LOFREQ_STAR_HOME} \
+  && mv ./lofreq_star-2.1.3.1/bin  ${LOFREQ_STAR_HOME}/ \
+  && rm -Rf /lofreq*
+ 	
 ENV PATH ${PATH}:${APPS_ROOT}/miniconda/bin/
 
+###############################################
+# R packages
 RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org')"
 RUN R -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
 RUN R -e "require(devtools); install_version('tidyr', version = '1.0.0', repos = 'http://cran.us.r-project.org')"
@@ -334,15 +338,12 @@ RUN R -e "require(devtools); install_version('forcats', version = '0.4.0', repos
 RUN R -e "require(devtools); install_version('readr', version = '1.3.1', repos = 'http://cran.us.r-project.org')"
 RUN R -e "require(devtools); install_version('plyr', version = '1.8.5', repos = 'http://cran.us.r-project.org')"
 RUN R -e "require(devtools); install_version('purrr', version = '0.3.3', repos = 'http://cran.us.r-project.org')"
-
-RUN mkdir ${APP_ROOT}/scripts
-ADD bin/analyze_af_report.Rmd ${APPS_ROOT}/scripts/analyze_af_report.Rmd
-
 #RUN R -e "require(devtools); install_version('ggplot2', version = '3.2.1', repos = 'http://cran.us.r-project.org')"
 #RUN R -e "require(devtools); install_version('jsonlite', version = '1.6', repos = 'http://cran.us.r-project.org')"
 #RUN R -e "require(devtools); install_version('tidyverse', version = '1.2.1', repos = 'http://cran.us.r-project.org')"
-
 RUN R -e "install.packages(c('tinytex'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
 RUN R -e "tinytex::install_tinytex()"
 
+RUN mkdir ${APP_ROOT}/scripts
+ADD bin/analyze_af_report.Rmd ${APPS_ROOT}/scripts/analyze_af_report.Rmd
 
