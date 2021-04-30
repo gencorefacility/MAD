@@ -210,7 +210,7 @@ ENV PATH ${BCFTOOLS_HOME}:${PATH}
 ENV MANPATH ${BCFTOOLS_HOME}/share/man:${MANPATH}
 ENV LD_LIBRARY_PATH ${BCFTOOLS_HOME}/lib:${LD_LIBRARY_PATH}
 
-RUN git clone --depth git://github.com/samtools/bcftools.git --branch ${BCFTOOLS_VERSION} ${BCFTOOLS_HOME} \
+RUN git clone --depth 1 git://github.com/samtools/bcftools.git --branch ${BCFTOOLS_VERSION} ${BCFTOOLS_HOME} \
   && cd ${BCFTOOLS_HOME} \
   && autoheader && autoconf && ./configure --with-htslib=${HTSLIB_HOME} \
   && make -j
