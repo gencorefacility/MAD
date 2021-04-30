@@ -143,7 +143,7 @@ RUN wget -O snpEff_v${SNPEFF_VERSION}_core.zip  https://sourceforge.net/projects
   && mkdir ${APPS_ROOT}/snpeff \
   && unzip snpEff_v${SNPEFF_VERSION}_core.zip \
   && mv snpEff ${APPS_ROOT}/snpeff/${SNPEFF_VERSION} \
-	&& rm snpEff_v${SNPEFF_VERSION}_core.zip
+  && rm snpEff_v${SNPEFF_VERSION}_core.zip
 				
 ###############################################
 #TRIMMOMATIC = 'trimmomatic/0.36'
@@ -156,7 +156,7 @@ RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmoma
   && unzip Trimmomatic-${TRIMMOMATIC_VERSION}.zip \
   && mkdir -p ${APPS_ROOT}/trimmomatic \
   && mv Trimmomatic-${TRIMMOMATIC_VERSION} ${TRIMMOMATIC_HOME} \
-	&& rm Trimmomatic-${TRIMMOMATIC_VERSION}.zip
+  && rm Trimmomatic-${TRIMMOMATIC_VERSION}.zip
 	
 ###############################################
 #PYPAIRIX = 'pypairix/intel/0.2.4'
@@ -266,7 +266,7 @@ RUN yum -y install centos-release-scl \
   && ./configure --with-hts=${HTSLIB_HOME} \
   && scl enable devtoolset-8 -- make -j \
   && scl enable devtoolset-8 -- make install \
-	&& cd /
+  && cd /
 
 ###############################################
 #NEATGENREADS = 'neat-genreads/v2'
@@ -299,13 +299,43 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
   && conda config --add channels defaults \
   && conda config --add channels bioconda \
   && conda config --add channels conda-forge \
-	&& conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6 \
-	&& echo '. ${APPS_ROOT}/miniconda/etc/profile.d/conda.sh' >> /etc/profile.d/miniconda.sh
+  && conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6 \
+  && echo '. ${APPS_ROOT}/miniconda/etc/profile.d/conda.sh' >> /etc/profile.d/miniconda.sh
 		
 ###############################################
 #PYSAM = pysam/intel/0.10.0
 
 RUN pip2 install pysam==0.10.0
 
-
 RUN echo 'conda activate base' >> /etc/profile.d/miniconda.sh
+
+###############################################
+#lofreq_star/2.1.3.1
+
+ENV LOFREQ_STAR_VERSION 2.1.3.1
+ENV LOFREQ_STAR_HOME ${APPS_ROOT}/lofreq_star/${LOFREQ_STAR_VERSION}
+ENV PATH ${PATH}:${LOFREQ_STAR_HOME}/bin
+
+RUN wget https://github.com/CSB5/lofreq/raw/master/dist/lofreq_star-${LOFREQ_STAR_VERSION}_linux-x86-64.tgz \
+  && tar -zxvf lofreq_star-${LOFREQ_STAR_VERSION}_linux-x86-64.tgz \
+  && mkdir -p ${LOFREQ_STAR_HOME} \
+  && mv ./lofreq_star-2.1.3.1/bin  ${LOFREQ_STAR_HOME}/
+
+ENV PATH ${PATH}:${APPS_ROOT}/miniconda/bin/
+
+RUN yum install -y libxml2-devel NLopt* pandoc
+
+RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org')"
+RUN R -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
+RUN R -e "require(devtools); install_version('tidyr', version = '1.0.0', repos = 'http://cran.us.r-project.org')"
+RUN R -e "require(devtools); install_version('forcats', version = '0.4.0', repos = 'http://cran.us.r-project.org')"
+RUN R -e "require(devtools); install_version('readr', version = '1.3.1', repos = 'http://cran.us.r-project.org')"
+RUN R -e "require(devtools); install_version('plyr', version = '1.8.5', repos = 'http://cran.us.r-project.org')"
+RUN R -e "require(devtools); install_version('purrr', version = '0.3.3', repos = 'http://cran.us.r-project.org')"
+
+RUN mkdir ${APP_ROOT}/scripts
+ADD bin/analyze_af_report.Rmd ${APPS_ROOT}/scripts/analyze_af_report.Rmd
+
+#RUN R -e "require(devtools); install_version('ggplot2', version = '3.2.1', repos = 'http://cran.us.r-project.org')"
+#RUN R -e "require(devtools); install_version('jsonlite', version = '1.6', repos = 'http://cran.us.r-project.org')"
+#RUN R -e "require(devtools); install_version('tidyverse', version = '1.2.1', repos = 'http://cran.us.r-project.org')"
