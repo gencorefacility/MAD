@@ -305,7 +305,8 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
   && conda config --add channels bioconda \
   && conda config --add channels conda-forge \
   && conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6 \
-  && echo '. ${APPS_ROOT}/miniconda/etc/profile.d/conda.sh' >> /etc/profile.d/miniconda.sh
+  && echo '. ${APPS_ROOT}/miniconda/etc/profile.d/conda.sh' >> /etc/profile.d/miniconda.sh \
+  && conda clean -t -y
 		
 ###############################################
 #PYSAM = pysam/intel/0.10.0
@@ -315,7 +316,6 @@ RUN echo 'conda activate base' >> /etc/profile.d/miniconda.sh
 
 ###############################################
 #lofreq_star/2.1.3.1
-
 ENV LOFREQ_STAR_VERSION 2.1.3.1
 ENV LOFREQ_STAR_HOME ${APPS_ROOT}/lofreq_star/${LOFREQ_STAR_VERSION}
 ENV PATH ${PATH}:${LOFREQ_STAR_HOME}/bin
@@ -327,9 +327,6 @@ RUN wget https://github.com/CSB5/lofreq/raw/master/dist/lofreq_star-${LOFREQ_STA
 	
 ENV PATH ${PATH}:${APPS_ROOT}/miniconda/bin/
 
-RUN yum install -y libxml2-devel NLopt* pandoc
-
-	
 RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org')"
 RUN R -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
 RUN R -e "require(devtools); install_version('tidyr', version = '1.0.0', repos = 'http://cran.us.r-project.org')"
@@ -347,3 +344,5 @@ ADD bin/analyze_af_report.Rmd ${APPS_ROOT}/scripts/analyze_af_report.Rmd
 
 RUN R -e "install.packages(c('tinytex'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
 RUN R -e "tinytex::install_tinytex()"
+
+
