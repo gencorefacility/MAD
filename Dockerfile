@@ -42,7 +42,7 @@ ENV BWA_VERSION 0.7.17
 ENV BWA_HOME ${APPS_ROOT}/bwa/${BWA_VERSION}
 ENV PATH ${BWA_HOME}:${PATH}
 
-RUN git clone --branch v${BWA_VERSION} https://github.com/lh3/bwa.git ${BWA_HOME} \
+RUN git clone --depth 1 --branch v${BWA_VERSION} https://github.com/lh3/bwa.git ${BWA_HOME} \
   && make -C ${BWA_HOME}
 
 ###############################################
@@ -164,7 +164,7 @@ ENV PAIRIX_VERSION 0.2.4
 ENV PAIRIX_HOME ${APPS_ROOT}/pairix/${PAIRIX_VERSION}
 ENV PATH ${PAIRIX_HOME}/bin:${PAIRIX_HOME}/util:${PAIRIX_HOME}/util/bam2pairs:${PATH}
 
-RUN git clone https://github.com/4dn-dcic/pairix --branch ${PAIRIX_VERSION} ${PAIRIX_HOME} \
+RUN git clone --depth 1 https://github.com/4dn-dcic/pairix --branch ${PAIRIX_VERSION} ${PAIRIX_HOME} \
   && make -C ${PAIRIX_HOME}
 
 ###############################################
@@ -173,7 +173,7 @@ RUN git clone https://github.com/4dn-dcic/pairix --branch ${PAIRIX_VERSION} ${PA
 ENV JVARKIT_HOME ${APPS_ROOT}/jvarkit
 ENV JVARKIT_DIST ${JVARKIT_HOME}/dist
 
-RUN git clone "https://github.com/lindenb/jvarkit.git" ${JVARKIT_HOME}
+RUN git clone --depth 1 "https://github.com/lindenb/jvarkit.git" ${JVARKIT_HOME}
 
 RUN $JVARKIT_HOME/gradlew --project-dir $JVARKIT_HOME sortsamrefname
 ENV SORTSAMREFNAME_JAR ${JVARKIT_DIST}/sortsamrefname.jar
@@ -201,7 +201,7 @@ ENV PATH ${BCFTOOLS_HOME}:${PATH}
 ENV MANPATH ${BCFTOOLS_HOME}/share/man:${MANPATH}
 ENV LD_LIBRARY_PATH ${BCFTOOLS_HOME}/lib:${LD_LIBRARY_PATH}
 
-RUN git clone git://github.com/samtools/bcftools.git --branch ${BCFTOOLS_VERSION} ${BCFTOOLS_HOME} \
+RUN git clone --depth 1 git://github.com/samtools/bcftools.git --branch ${BCFTOOLS_VERSION} ${BCFTOOLS_HOME} \
   && cd ${BCFTOOLS_HOME} \
   && autoheader && autoconf && ./configure --with-htslib=${HTSLIB_HOME} \
   && make -j
@@ -227,7 +227,7 @@ ENV SEQTK_VERSION 1.2
 ENV SEQTK_HOME ${APPS_ROOT}/seqtk/${SEQTK_VERSION}
 ENV PATH ${SEQTK_HOME}:${PATH}
 
-RUN git clone https://github.com/lh3/seqtk.git --branch v${SEQTK_VERSION} ${SEQTK_HOME} \
+RUN git clone --depth 1 https://github.com/lh3/seqtk.git --branch v${SEQTK_VERSION} ${SEQTK_HOME} \
   && make -C ${SEQTK_HOME}
 
 ###############################################
@@ -237,7 +237,7 @@ ENV FREEBAYES_VERSION 1.1.0
 ENV FREEBAYES_HOME ${APPS_ROOT}/freebayes/${FREEBAYES_VERSION}
 ENV PATH ${FREEBAYES_HOME}/bin:${PATH}
 
-RUN git clone --branch v${FREEBAYES_VERSION} --recursive git://github.com/ekg/freebayes.git ${FREEBAYES_HOME} \
+RUN git clone --depth 1 --branch v${FREEBAYES_VERSION} --recursive git://github.com/ekg/freebayes.git ${FREEBAYES_HOME} \
   && make -C ${FREEBAYES_HOME}
   
 ###############################################
@@ -259,7 +259,7 @@ ENV IVAR_HOME ${APPS_ROOT}/ivar/${IVAR_VERSION}
 
 RUN yum -y install centos-release-scl \
   && yum -y install devtoolset-8-gcc devtoolset-8-gcc-c++ \
-  && git clone https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION} ${IVAR_HOME} \
+  && git clone --depth 1 https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION} ${IVAR_HOME} \
   && cd ${IVAR_HOME} \
   && ./autogen.sh \
   && ./configure --with-hts=${HTSLIB_HOME} \
@@ -277,7 +277,7 @@ ENV NEATGENREADS_HOME ${APPS_ROOT}/neat-genreads/${NEATGENREADS_VERSION}
 RUN yum install -y python2-pip \
   && pip2 install --upgrade pip==20.3.1 \
   && pip2 install numpy==1.16.6 \
-  && git clone --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
+  && git clone --depth 1 --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
   && echo 'alias genReads.py="python2 ${NEATGENREADS_HOME}/genReads.py"' >> /etc/profile.d/neatgen.sh \
   && echo 'alias mergeJobs.py="python2 ${NEATGENREADS_HOME}/mergeJobs.py"' >> /etc/profile.d/neatgen.sh \
   && echo 'alias computeFraglen.py="python2 ${NEATGENREADS_HOME}/utilities/computeFraglen.py"' >> /etc/profile.d/neatgen.sh \
