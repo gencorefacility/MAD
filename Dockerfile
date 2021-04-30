@@ -2,9 +2,10 @@
 
 FROM centos:centos7
 
-RUN yum install -y epel-release
-
-RUN yum -y install \
+RUN yum update -y \
+  && install -y epel-release \
+  && install -y centos-release-scl \
+  && yum -y install \
 	git \
 	wget \
 	java-1.8.0-openjdk \
@@ -25,7 +26,15 @@ RUN yum -y install \
 	graphviz \
 	gsl-devel \ 
 	perl-ExtUtils-Embed \
-	cmake
+	cmake \
+	python2-pip \
+	libxml2-devel \
+	NLopt* \
+	pandoc \
+	devtoolset-8-gcc \
+	devtoolset-8-gcc-c++ \
+   && yum clean all \
+   && rm -rf /var/cache/yum
 
 ENV APPS_ROOT /apps
 RUN mkdir -p ${APPS_ROOT}
@@ -257,9 +266,7 @@ RUN mkdir -p ${VARSCAN_HOME} \
 ENV IVAR_VERSION 1.2.3
 ENV IVAR_HOME ${APPS_ROOT}/ivar/${IVAR_VERSION}
 
-RUN yum -y install centos-release-scl \
-  && yum -y install devtoolset-8-gcc devtoolset-8-gcc-c++ \
-  && git clone https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION} ${IVAR_HOME} \
+RUN git clone https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION} ${IVAR_HOME} \
 	&& cd ${IVAR_HOME} \
   && ./autogen.sh \
   && ./configure --with-hts=${HTSLIB_HOME} \
@@ -274,8 +281,7 @@ RUN yum -y install centos-release-scl \
 ENV NEATGENREADS_VERSION 2.0
 ENV NEATGENREADS_HOME ${APPS_ROOT}/neat-genreads/${NEATGENREADS_VERSION}
 
-RUN yum install -y python2-pip \
-  && pip2 install --upgrade pip \
+RUN pip2 install --upgrade pip \
   && pip2 install numpy \
   && git clone --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
   && echo 'alias genReads.py="python2 ${NEATGENREADS_HOME}/genReads.py"' >> /etc/profile.d/neatgen.sh \
