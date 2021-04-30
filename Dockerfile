@@ -2,10 +2,10 @@
 
 FROM centos:centos7
 
-RUN yum update -y \
-  && install -y epel-release \
-  && install -y centos-release-scl \
-  && yum -y install \
+RUN  yum update -y \
+  && yum install -y epel-release \
+  && yum install -y centos-release-scl \
+  && yum install -y \
 	git \
 	wget \
 	java-1.8.0-openjdk \
@@ -41,7 +41,7 @@ RUN mkdir -p ${APPS_ROOT}
 
 ###############################################
 # R packages
-RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+#RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
 
 ###############################################
 #BWA = 'bwa/intel/0.7.17'
@@ -52,7 +52,7 @@ ENV BWA_HOME ${APPS_ROOT}/bwa/${BWA_VERSION}
 ENV PATH ${BWA_HOME}:${PATH}
 
 RUN git clone --branch v${BWA_VERSION} https://github.com/lh3/bwa.git ${BWA_HOME} \
-  && make -C ${BWA_HOME}
+  && make -j -C ${BWA_HOME}
 
 ###############################################
 #PICARD = 'picard/2.17.11'
@@ -108,8 +108,8 @@ RUN wget https://github.com/samtools/htslib/releases/download/${HTSLIB_VERSION}/
   && autoheader \
   && autoconf  \
   && ./configure --prefix=${HTSLIB_HOME} \
-  && make \
-  && make install \
+  && make -j \
+  && make -j install \
   && cd / \
   && rm -Rf /htslib-${HTSLIB_VERSION}
 
@@ -133,8 +133,8 @@ RUN wget https://github.com/samtools/samtools/releases/download/${SAMTOOLS_VERSI
   && autoheader \
   && autoconf -Wno-syntax \
   && ./configure --prefix=${SAMTOOLS_HOME} \
-  && make \
-  && make install \
+  && make -j \
+  && make -j install \
   && cd / \
   && rm -Rf samtools-${SAMTOOLS_VERSION}
 	
@@ -174,7 +174,7 @@ ENV PAIRIX_HOME ${APPS_ROOT}/pairix/${PAIRIX_VERSION}
 ENV PATH ${PAIRIX_HOME}/bin:${PAIRIX_HOME}/util:${PAIRIX_HOME}/util/bam2pairs:${PATH}
 
 RUN git clone https://github.com/4dn-dcic/pairix --branch ${PAIRIX_VERSION} ${PAIRIX_HOME} \
-  && make -C ${PAIRIX_HOME}
+  && make -j -C ${PAIRIX_HOME}
 
 ###############################################
 #JVARKIT = 'jvarkit/base'
@@ -224,7 +224,7 @@ ENV PATH ${BEDTOOLS_HOME}/bin:${PATH}
 
 RUN wget https://github.com/arq5x/bedtools2/releases/download/v${BEDTOOLS_VERSION}/bedtools-${BEDTOOLS_VERSION}.tar.gz \
   && tar -zxvf bedtools-${BEDTOOLS_VERSION}.tar.gz \
-  && make -C bedtools2 \
+  && make -j -C bedtools2 \
   && mkdir -p ${BEDTOOLS_HOME}/bin \
   && mv bedtools2/bin/* ${BEDTOOLS_HOME}/bin \
   && rm -Rf bedtools2 bedtools-${BEDTOOLS_VERSION}.tar.gz
@@ -237,7 +237,7 @@ ENV SEQTK_HOME ${APPS_ROOT}/seqtk/${SEQTK_VERSION}
 ENV PATH ${SEQTK_HOME}:${PATH}
 
 RUN git clone https://github.com/lh3/seqtk.git --branch v${SEQTK_VERSION} ${SEQTK_HOME} \
-  && make -C ${SEQTK_HOME}
+  && make -j -C ${SEQTK_HOME}
 
 ###############################################
 #FREEBAYES = 'freebayes/intel/1.1.0'
@@ -246,7 +246,7 @@ ENV FREEBAYES_VERSION 1.1.0
 ENV FREEBAYES_HOME ${APPS_ROOT}/freebayes/${FREEBAYES_VERSION}
 ENV PATH ${FREEBAYES_HOME}/bin:${PATH}
 
-RUN git clone --branch v${FREEBAYES_VERSION} --recursive git://github.com/ekg/freebayes.git ${FREEBAYES_HOME} \
+RUN git clone --depth 1 --branch v${FREEBAYES_VERSION} --recursive git://github.com/ekg/freebayes.git ${FREEBAYES_HOME} \
   && make -C ${FREEBAYES_HOME}
   
 ###############################################
@@ -281,8 +281,8 @@ RUN git clone https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION}
 ENV NEATGENREADS_VERSION 2.0
 ENV NEATGENREADS_HOME ${APPS_ROOT}/neat-genreads/${NEATGENREADS_VERSION}
 
-RUN pip2 install --upgrade pip \
-  && pip2 install numpy \
+RUN pip2 install --upgrade pip==20.3.1 \
+  && pip2 install numpy==1.16.6 \
   && git clone --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
   && echo 'alias genReads.py="python2 ${NEATGENREADS_HOME}/genReads.py"' >> /etc/profile.d/neatgen.sh \
   && echo 'alias mergeJobs.py="python2 ${NEATGENREADS_HOME}/mergeJobs.py"' >> /etc/profile.d/neatgen.sh \
