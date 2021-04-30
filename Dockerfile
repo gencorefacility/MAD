@@ -32,8 +32,7 @@ RUN mkdir -p ${APPS_ROOT}
 
 ###############################################
 # R packages
-RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown','tinytex'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
-RUN R -e "tinytex::install_tinytex()"
+RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
 
 ###############################################
 #BWA = 'bwa/intel/0.7.17'
@@ -139,7 +138,7 @@ ENV SNPEFF_HOME ${APPS_ROOT}/snpeff/${SNPEFF_VERSION}
 ENV SNPEFF_JAR ${SNPEFF_HOME}/snpEff.jar
 ENV SNPSIFT_JAR ${SNPEFF_HOME}/SnpSift.jar
 
-RUN wget -O snpEff_v${SNPEFF_VERSION}_core.zip  https://sourceforge.net/projects/snpeff/files/snpEff_v${SNPEFF_VERSION}_core.zip/download# \
+RUN wget -O snpEff_v${SNPEFF_VERSION}_core.zip  https://sourceforge.net/projects/snpeff/files/snpEff_v${SNPEFF_VERSION}_core.zip/download \
   && mkdir ${APPS_ROOT}/snpeff \
   && unzip snpEff_v${SNPEFF_VERSION}_core.zip \
   && mv snpEff ${APPS_ROOT}/snpeff/${SNPEFF_VERSION} \
@@ -190,7 +189,7 @@ ENV PILON_HOME ${APPS_ROOT}/pilon/${PILON_VERSION}
 ENV PILON_JAR ${PILON_HOME}/pilon.jar
 
 RUN mkdir -p ${PILON_HOME} \
- && wget https://github.com/broadinstitute/pilon/releases/download/v${PILON_VERSION}/pilon-${PILON_VERSION}.jar -O ${PILON_HOME}/pilon.jar
+  && wget https://github.com/broadinstitute/pilon/releases/download/v${PILON_VERSION}/pilon-${PILON_VERSION}.jar -O ${PILON_HOME}/pilon.jar
 
 ###############################################
 #BCFTOOLS = 'bcftools/intel/1.9'
@@ -261,7 +260,7 @@ ENV IVAR_HOME ${APPS_ROOT}/ivar/${IVAR_VERSION}
 RUN yum -y install centos-release-scl \
   && yum -y install devtoolset-8-gcc devtoolset-8-gcc-c++ \
   && git clone https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION} ${IVAR_HOME} \
-	&& cd ${IVAR_HOME} \
+  && cd ${IVAR_HOME} \
   && ./autogen.sh \
   && ./configure --with-hts=${HTSLIB_HOME} \
   && scl enable devtoolset-8 -- make -j \
@@ -276,8 +275,8 @@ ENV NEATGENREADS_VERSION 2.0
 ENV NEATGENREADS_HOME ${APPS_ROOT}/neat-genreads/${NEATGENREADS_VERSION}
 
 RUN yum install -y python2-pip \
-  && pip2 install --upgrade pip==20.3.1 \
-  && pip2 install numpy==1.16.6 \
+  && pip2 install --upgrade pip \
+  && pip2 install numpy \
   && git clone --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
   && echo 'alias genReads.py="python2 ${NEATGENREADS_HOME}/genReads.py"' >> /etc/profile.d/neatgen.sh \
   && echo 'alias mergeJobs.py="python2 ${NEATGENREADS_HOME}/mergeJobs.py"' >> /etc/profile.d/neatgen.sh \
@@ -292,21 +291,20 @@ RUN yum install -y python2-pip \
 
 ###############################################
 #CONDA + 
-#biopython==1.72 deeptools==3.3.1 pysam==0.14.1
+#biopython==1.72 deeptools==3.3.1 pysam==0.14.1 pyfaidx==0.5.9.1
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
   && bash ~/miniconda.sh -b -p ${APPS_ROOT}/miniconda \
   && eval "$(${APPS_ROOT}/miniconda/bin/conda shell.bash hook)" \
   && conda config --add channels defaults \
   && conda config --add channels bioconda \
   && conda config --add channels conda-forge \
-  && conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6 \
+  && conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6 pyfaidx==0.5.9.1 \
   && echo '. ${APPS_ROOT}/miniconda/etc/profile.d/conda.sh' >> /etc/profile.d/miniconda.sh
 		
 ###############################################
 #PYSAM = pysam/intel/0.10.0
 
-RUN pip2 install pysam==0.10.0
-
+RUN pip2 install pysam==0.10.0 numpy scipy argparse
 RUN echo 'conda activate base' >> /etc/profile.d/miniconda.sh
 
 ###############################################
@@ -318,13 +316,14 @@ ENV PATH ${PATH}:${LOFREQ_STAR_HOME}/bin
 
 RUN wget https://github.com/CSB5/lofreq/raw/master/dist/lofreq_star-${LOFREQ_STAR_VERSION}_linux-x86-64.tgz \
   && tar -zxvf lofreq_star-${LOFREQ_STAR_VERSION}_linux-x86-64.tgz \
-  && mkdir -p ${LOFREQ_STAR_HOME} \
-  && mv ./lofreq_star-2.1.3.1/bin  ${LOFREQ_STAR_HOME}/
-
+	&& mkdir -p ${LOFREQ_STAR_HOME} \
+	&& mv ./lofreq_star-2.1.3.1/bin  ${LOFREQ_STAR_HOME}/ 
+	
 ENV PATH ${PATH}:${APPS_ROOT}/miniconda/bin/
 
 RUN yum install -y libxml2-devel NLopt* pandoc
 
+	
 RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org')"
 RUN R -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
 RUN R -e "require(devtools); install_version('tidyr', version = '1.0.0', repos = 'http://cran.us.r-project.org')"
@@ -339,3 +338,6 @@ ADD bin/analyze_af_report.Rmd ${APPS_ROOT}/scripts/analyze_af_report.Rmd
 #RUN R -e "require(devtools); install_version('ggplot2', version = '3.2.1', repos = 'http://cran.us.r-project.org')"
 #RUN R -e "require(devtools); install_version('jsonlite', version = '1.6', repos = 'http://cran.us.r-project.org')"
 #RUN R -e "require(devtools); install_version('tidyverse', version = '1.2.1', repos = 'http://cran.us.r-project.org')"
+
+RUN R -e "install.packages(c('tinytex'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "tinytex::install_tinytex()"
