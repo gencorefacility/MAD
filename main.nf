@@ -66,6 +66,7 @@ process seqErrorModel{
 process gcModel{
     output:
     file('gc_model.p') into gc_model_ch
+    file('gc_model.p') into gc_model_ch_2
 
 
     script:
@@ -78,7 +79,6 @@ process gcModel{
 process fraglenModel{
     output:
     file('fraglen.p') into fraglen_model_ch
-    file('fraglen.p') into fraglen_model_ch_2
 
     script:
     """
@@ -92,7 +92,7 @@ process simulate_snvs{
     input:
     file(mut_model) from mut_model_ch
     file(seq_err_model) from seq_err_model_ch
-    file(fraglen_model) from fraglen_model_ch
+    file(gc_model) from gc_model_ch
 
     output:
     set val(pair_id),
@@ -111,10 +111,10 @@ process simulate_snvs{
 	-R 151 \
 	-o $pair_id \
 	-e $seq_err_model \
+	--gc-model $gc_model \
 	-m $mut_model \
 	-M $params.mut_rate \
 	--vcf \
-	--pe-model $fraglen_model \
 	--no-fastq \
 	-c $params.readsim_cov
     """
@@ -127,8 +127,8 @@ process simulate_reads{
     set val(pair_id), 
     file(vcf) from readsim_1_out_ch
     file(seq_err_model) from seq_err_model_ch_2
-    file(fraglen_model) from fraglen_model_ch_2
-    file(gc_model) from gc_model_ch
+    file(fraglen_model) from fraglen_model_ch
+    file(gc_model) from gc_model_ch_2
     each af from params.readsim_allele_fracs
 
     output:
@@ -491,9 +491,9 @@ process freebayes{
     each freebayes_config from params.freebayes_configs
 
     output:
-    file("${sample_id}_freebayes_${name}.vcf") into freebayes_bzip_tabix_vcf_ch
+    file("${sample_id}_freebayes-${name}.vcf") into freebayes_bzip_tabix_vcf_ch
     set val(sample_id),
-        file("${sample_id}_freebayes_${name}.vcf") \
+        file("${sample_id}_freebayes-${name}.vcf") \
         into freebayes_vcf_ch
     file '*' into freebayes_out_ch
 
@@ -501,7 +501,7 @@ process freebayes{
     name = freebayes_config[0]
     fb_params = freebayes_config[1]
     """
-    freebayes $fb_params -f $ref $preprocessed_bam > ${sample_id}_freebayes_${name}.vcf
+    freebayes $fb_params -f $ref $preprocessed_bam > ${sample_id}_freebayes-${name}.vcf
     """
 }
 
