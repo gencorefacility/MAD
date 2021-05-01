@@ -312,7 +312,7 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 ###############################################
 #PYSAM = pysam/intel/0.10.0
 
-RUN pip2 install pysam==0.10.0
+RUN pip2 install pysam==0.10.0 numpy scipy argparse
 RUN echo 'conda activate base' >> /etc/profile.d/miniconda.sh
 
 ###############################################
