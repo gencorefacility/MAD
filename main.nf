@@ -120,16 +120,53 @@ process simulate_snvs{
     """
 }
 
+process set_vcf_afs{
+    publishDir "${params.out}/set_vcf_afs", mode:'copy'
+
+    input:
+    set val(pair_id),
+    	file(vcf) from readsim_1_out_ch
+    each af from params.readsim_allele_fracs
+
+    output:
+    set val(pair_id),
+        file("${pair_id}.vcf") into set_vcf_afs_ch
+
+    script:
+    pair_id = pair_id + "_AF_${af}"
+    """
+    # This script will edit the GT of all snps to $af
+    # for consumption by genReads.py/reseq in the next step
+    prepare_neat_vcf.py $vcf $ref $af > ${pair_id}.vcf
+    """
+
+}
+
+process reorder_model_bam{
+    output:
+    file("reordered_model_bam.bam") into reorder_model_bam_ch
+
+    script:
+    """
+    java -jar \$PICARD_JAR ReorderSam \
+	INPUT=$readsim_model_bam \
+	OUTPUT=reordered_model_bam.bam \
+	REFERENCE=$ref
+    """
+}
+
 process simulate_reads{
     publishDir "${params.out}/readsim_2", mode:'copy'
 
     input:
     set val(pair_id), 
-    file(vcf) from readsim_1_out_ch
+    //file(vcf) from readsim_1_out_ch
+    file(vcf) from set_vcf_afs_ch
     file(seq_err_model) from seq_err_model_ch_2
     file(fraglen_model) from fraglen_model_ch
     file(gc_model) from gc_model_ch_2
-    each af from params.readsim_allele_fracs
+    file(model_bam) from reorder_model_bam_ch
+    //each af from params.readsim_allele_fracs
 
     output:
     set val(pair_id),
@@ -140,12 +177,7 @@ process simulate_reads{
     file("${pair_id}.vcf") into analyze_af_report_vcf
 
     script:
-    pair_id = pair_id + "_AF_${af}"
     """
-    # This script will edit the GT of all snps to $af
-    # for consumption by genReads.py in the next step
-    prepare_neat_vcf.py $vcf $ref $af > ${pair_id}.vcf
-    
     # Simulate reads inserting snps from the output
     # of the above step directly into the reads
     python2 /apps/neat-genreads/2.0/genReads.py \
@@ -167,12 +199,12 @@ process simulate_reads{
     # using ReSeq
     #reseq illuminaPE \
     #    -r $ref \
-    #    -b $readsim_model_bam \
+    #    -b $model_bam \
     #    -V ${pair_id}.vcf \
     #    -1 ${pair_id}_read1.fq \
     #    -2 ${pair_id}_read2.fq \
     #    -c $params.readsim_cov \
-    #	--noBias
+    # 	--noBias
     """
 }
 
@@ -364,7 +396,8 @@ process timo{
     """
     samtools view -bq 20 -F 1284 -o filtered.bam $preprocessed_bam
     samtools index filtered.bam
-    readreport_v4_2.py \
+    #readreport_v4_2.py
+    timo.v2.py \
 	--infile filtered.bam \
 	--ref $ref \
 	-c 0.001 \
@@ -394,12 +427,13 @@ process varscan {
     script:
     """
     samtools mpileup -f $ref $preprocessed_bam |\
-	java -jar \$VARSCAN_JAR pileup2snp \
+	java -jar \$VARSCAN_JAR mpileup2snp \
 	--min-coverage 1 \
-	--min-var-freq 0.001 > ${sample_id}_varscan.snp
+	--min-var-freq 0.001 \
+	--output-vcf 1 > ${sample_id}_varscan.vcf
     #vs_to_vcf.py ${sample_id}_varscan.snp true
     #mv ${sample_id}_varscan.vcf ${sample_id}_varscan_unfiltered.vcf
-    vs_to_vcf.py ${sample_id}_varscan.snp
+    #vs_to_vcf.py ${sample_id}_varscan.snp
     """
 }
 
@@ -512,19 +546,26 @@ process mutect2{
     input:
     set val(sample_id),
         file(preprocessed_bam) from mutect2_ch
+    each m2_config from params.m2_configs
 
     output:
     set val(sample_id), 
-	file("${sample_id}_mutect2_filtered_pf.vcf") \
+	file("${sample_id}_mutect2-${name}_filtered_pf.vcf") \
 	into mutect2_vcf_ch
-    file("${sample_id}_mutect2_filtered_pf.vcf") into mutect2_bzip_tabix_vcf_ch
+    set val(sample_id),
+        file("${sample_id}_mutect2-${name}-unfiltered.vcf") \
+        into mutect2_vcf_ch_unfiltered
+    file("${sample_id}_mutect2-${name}_filtered_pf.vcf") into mutect2_bzip_tabix_vcf_ch
     file '*' into mutect2_out_ch
 
     script:
+    name = m2_config[0]
+    m2_params = m2_config[1]
     """
-    gatk Mutect2 -R $ref -I $preprocessed_bam -O ${sample_id}_mutect2.vcf
-    gatk FilterMutectCalls -R $ref -V ${sample_id}_mutect2.vcf -O ${sample_id}_mutect2_filtered.vcf
-    gatk SelectVariants -R $ref -V ${sample_id}_mutect2_filtered.vcf --exclude-filtered -O ${sample_id}_mutect2_filtered_pf.vcf
+    gatk Mutect2 -R $ref $m2_params -I $preprocessed_bam -O ${sample_id}_mutect2-${name}.vcf
+    gatk FilterMutectCalls -R $ref -V ${sample_id}_mutect2-${name}.vcf -O ${sample_id}_mutect2-${name}_filtered.vcf
+    gatk SelectVariants -R $ref -V ${sample_id}_mutect2-${name}_filtered.vcf --exclude-filtered -O ${sample_id}_mutect2-${name}_filtered_pf.vcf
+    cp ${sample_id}_mutect2-${name}.vcf ${sample_id}_mutect2-${name}-unfiltered.vcf
     """
 }
 
@@ -642,6 +683,32 @@ process filterSnps {
     """
 }
 
+process snpEff {
+    publishDir "${params.out}/snpeff", mode:'copy'
+
+    input:
+    //set val(pair_id), \
+        //val(round), \
+        //file(filtered_snps), \
+        //file(filtered_snps_index) \
+        //from filtered_snps_for_snpeff
+
+    output:
+    //file '*' into snpeff_out
+    //file ("${pair_id}_filtered_snps.ann.vcf") into snpeff_bzip_tabix_vcf
+    //file ("${pair_id}.csv") into multiqc_snpeff_csv_ch
+
+    script:
+    """
+    #java -jar SNPEFF_JAR -v \
+    #	-dataDir $params.snpeff_data \
+    #	$params.snpeff_db \
+    #   csvStats {pair_id}.csv \
+    #   {filtered_snps} > {pair_id}_filtered_snps.ann.vcf
+    """
+}
+
+
 process make_bw{
     publishDir "${params.out}/bigwig", mode:'copy'
 
@@ -756,6 +823,7 @@ process compare_afs{
 	from ivar_vcf_ch
 	.mix(freebayes_vcf_ch)
 	.mix(mutect2_vcf_ch)
+	.mix(mutect2_vcf_ch_unfiltered)
 	.mix(tims_vcf_ch)
 	//.mix(tims_nb_vcf_ch)
 	.mix(hc_vcf_ch)
