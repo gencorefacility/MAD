@@ -1,5 +1,5 @@
 ---
-title: "Variants_AllCallers"
+title: "R Notebook"
 output: html_notebook
 ---
 
@@ -7,115 +7,77 @@ output: html_notebook
 1. Calculates true pos, false pos, and false neg and makes a precision recall curve for all tools
 2. Finds total numbers of variants found by tools at different allele frequencies and sequencing depths
 3. Looks at correlation between SNPS in the golden vcf and worflow vcf
-For viral variant callers!
 
+```{r}
+#knitr::opts_knit$set(root.dir = "/Users/marissaknoll/Desktop/MAF/")
+#run in working directory
+#setwd("/Users/marissaknoll/Desktop/MAF/") 
+```
+
+```{r}
+#library(available)
+#available("Vivaldi", browse = FALSE)
+```
 
 ##Loading Libraries
 ```{r}
-library('ggplot2')
-library('tidyverse')
 library('plyr')
+library('tidyverse')
+library("plotrix") 
+library('ggplot2')
 library('ggpubr')
 library("MLmetrics")
-
-MyColors = c("#E76F51", "#E9C369", "#2A9D8F","#2B4FA2", "#119DAC", "#672D7B", "#262366", "#BCBCBC")
+library("RColorBrewer")
+        
+MyColors = c("#e41a1c", "#377eb8", "#4daf4a","#984ea3", "#ff6600", "#ffcc33", "#f781bf", "#a65628", "#999999", "#006600", "#993333", "#cc99ff", "#663300")
+# This is basically RColorBrewer Set1 but I darkened yellow to make it easier to see then changed orange a bit to differ more from yellow
+#
+SEGMENTLIST = c("H1N1_PB2","H1N1_PB1","H1N1_PA","H1N1_HA","H1N1_NP","H1N1_NA","H1N1_MP","H1N1_NS")
 ggplot2::theme_set(theme_minimal())
 
-```
-
-```{r}
-detach(package:plyr, unload=TRUE)
-library("plotrix") 
-```
-
-##Making Transition/Transversion Function
-```{r}
-TsTv = function(dataframe) {
-  transitions = 0
-  for (row in 1:nrow(dataframe)) {
-  
-   REF <- dataframe[row, "ref"] #requires dataframe to have column name "ref"
-   ALT <- dataframe[row, "alt"] # requires dataframe to have column name "alt"
-
-    if(REF == "A" & ALT == "G")
-      transitions = transitions + 1
-    if(REF == "G" & ALT == "A")
-      transitions = transitions + 1
-    if(REF == "C" & ALT == "T")
-      transitions = transitions + 1
-    if(REF == "T" & ALT == "C")
-      transitions = transitions + 1
-  }
-
-  transversions = 0
-  for (row in 1:nrow(dataframe)) {
-  
-    REF <- dataframe[row, "ref"]
-    ALT <- dataframe[row, "alt"]
-  
-    if(REF == "A" & ALT == "T")
-      transversions = transversions + 1
-    if(REF == "T" & ALT == "A")
-      transversions = transversions + 1
-    if(REF == "C" & ALT == "A")
-      transversions = transversions + 1
-    if(REF == "A" & ALT == "C")
-      transversions = transversions + 1
-    if(REF == "G" & ALT == "T")
-      transversions = transversions + 1
-    if(REF == "T" & ALT == "G")
-      transversions = transversions + 1
-    if(REF == "C" & ALT == "G")
-      transversions = transversions + 1
-    if(REF == "G" & ALT == "C")
-      transversions = transversions + 1
-  }
-
-  TsTv_df = data.frame(transitions,transversions)
-  print(TsTv_df)
-  TsTv_ratio = (transitions/transversions)
-  print(TsTv_ratio)
-  
-}
+totalbases = 29903 # at some point should change this from being hardcoded to make this more flexible
+readsim_cov = 100000 #hardocding this for now so my code runs
 ```
 
 ##Reading in Variant Data and Evaluating
 ```{r}
 AV = read.csv(af_report,header = T)
+#make the segments in a specific order
+AV$chrom = factor(AV$chrom, levels = SEGMENTLIST)
+
 AV$sample_id = as.character(AV$sample_id)
 AV$dp = as.numeric(AV$dp)
 AV = separate(AV, sample_id, sep = "_", 
-               into = c(NA,NA,"allele_freq",NA,"seq_depth","tool","parameter"))%>% 
+               into = c("strain","AF","allele_freq","frac","seq_depth","tool","parameter","parameter2")) %>%
+  select(allele_freq,seq_depth,tool, parameter, chrom,pos,af_golden,af_workflow,ref,alt,dp) %>%
   filter(ref == "A" | ref == "C" | ref == "T" | ref == "G") %>% 
   filter(alt == "A" | alt == "C" | alt == "T" | alt == "G") %>% droplevels()
 AV$seq_depth = as.numeric(AV$seq_depth)
-AV$coverage = (AV$seq_depth * 100000)
-
-AV$parameter = NULL
+AV$coverage = (AV$seq_depth * readsim_cov) #variable called in pipeline, corresponds to highest coverage
+AV$coverage = as.character(AV$coverage)
 head(AV)
 
-Dp_Variation = ggplot(AV, aes(x = log10(coverage), y = log10(dp), color = tool)) +
-  geom_point() + 
-  facet_wrap(~tool, scales = "free_y") +
-  scale_color_manual(values = MyColors)
-print(Dp_Variation)
-ggsave(Dp_Variation, file = "AV_Dp_Coverage.png")
+variant_pos = ggplot(AV, aes(x = pos, y = tool)) +
+  geom_point() +
+  facet_grid(~chrom, scales = "free_x") + theme_minimal(base_size = 6)
+print(variant_pos)
+
 ```
 
 ##Reading in Golden Data and Evaluating
 ```{r}
 viral_golden = read.table(golden_vcf, stringsAsFactors = F)
 colnames(viral_golden) = c("chrom","pos","ID","ref","alt","qual","filter","info","codes","genotype")
-viral_golden = separate(viral_golden, info, sep = "=", into = c("label","AF"))
-viral_golden$label = NULL
+viral_golden = separate(viral_golden, info, sep = "=", into = c(NA,"AF"))
+viral_golden$chrom = factor(viral_golden$chrom, levels = SEGMENTLIST)
 head(viral_golden)
 dim(viral_golden)
 
-viral_golden_pos = ggplot(viral_golden, aes(x = pos, y = ref, color = alt)) +
-  geom_point()
-print(viral_golden_pos)
 
-TsTv(viral_golden)
+viral_golden_pos = ggplot(viral_golden, aes(x = pos, y = ref, color = alt)) +
+  geom_point() +
+  facet_grid(~chrom, scales = "free_x")+ theme_minimal(base_size = 6)
+print(viral_golden_pos)
 ```
 
 ##SetAF - Separating Data into TP, FP, FN
@@ -150,6 +112,16 @@ AllVar$recall = (AllVar$TP)/(AllVar$TP + AllVar$FN)
 AllVar$area = AllVar$prec * AllVar$recall
 head(AllVar)
 ```
+```{r}
+# SetAF Data
+ggplot(AV_setAF, aes(x = tool, fill = category)) +
+  geom_bar() +
+  facet_grid(allele_freq~coverage) +
+  theme(text = element_text(size = 15),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_fill_brewer(palette = "Dark2")
+# plot as percentage of FN as well
+```
 
 ##RandomAF - Separating Data into TP, FP, FN
 ```{r}
@@ -182,259 +154,111 @@ rAllVar$recall = (rAllVar$TP)/(rAllVar$TP + rAllVar$FN)
 rAllVar$area = rAllVar$prec * rAllVar$recall
 head(rAllVar)
 ```
-
-#1. Precision_Recall Curves
 ```{r}
-PR_AllVarSet_freq = ggplot(AllVar,aes(x=recall, y=prec, group = tool, color = tool)) +
-  geom_point() + 
-  geom_line() +
-  facet_wrap(~allele_freq) +
-  scale_color_manual(values = MyColors)
-print(PR_AllVarSet_freq)
-ggsave("PR_AllVarSet_byAF.png",PR_AllVarSet_freq)
-
-PR_AllVarSet_cover = ggplot(AllVar,aes(x=recall, y=prec, group = tool, color=tool)) +
-  geom_point() + 
-  geom_line() +
-  facet_wrap(~coverage) +
-  scale_color_manual(values = MyColors)
-print(PR_AllVarSet_cover)
-ggsave("PR_AllVarSet_byCov.png",PR_AllVarSet_cover)
-
-PR_AllVarRandom = ggplot(rAllVar,aes(x=recall, y=prec, group = tool, color=tool)) +
-  geom_point() + 
-  geom_line() +
-  scale_color_manual(values = MyColors)
-print(PR_AllVarRandom)
-ggsave("PR_AllVarRandom.png",PR_AllVarRandom)
-
-# Examining Data
-
-AllVar_PR_zeros = filter(AllVar, prec == 0 & recall == 0)
-AllVar_PR_high = filter(AllVar, prec > 0.9 & recall > 0.9)
-
-AllVar_PR_highest = group_by(AllVar, tool, allele_freq, coverage) %>%
-  arrange(area, decreasing = TRUE)
-write.csv(AllVar_PR_highest, file = "AllVar_PR_Thresholds.csv")
+# RandomAF Data
+ggplot(AV_randomAF, aes(x = tool, fill = category)) +
+  geom_bar() +
+  facet_grid(allele_freq~coverage) +
+  theme(text = element_text(size = 15),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_fill_brewer(palette = "Dark2")
+# plot as percentage of FN as well
 ```
 
-#2.1 SetAF - Proportion of Variants Found
+##SetAF - Correlation Between Golden and Workflow
 ```{r}
-AV_setAF_counts = group_by(AV_setAF_truepos, tool, allele_freq, coverage) %>% tally()
-AV_setAF_counts$proportion = (AV_setAF_counts$n / nrow(viral_golden))
-
-AV_setAF_proportion = ggplot(AV_setAF_counts,aes(x = log10(coverage), y = proportion,
-                                                group = tool, color = tool)) +
-  geom_point() +
-  geom_line() +
-  facet_grid(~allele_freq) +
-  scale_color_manual(values = MyColors)
-print(AV_setAF_proportion)
-ggsave("AllVarSet_Proportion.png", AV_setAF_proportion)
-```
-
-#2.2 RandomAF - Proportion of Variants Found
-```{r}
-AV_randomAF_counts = group_by(AV_randomAF_truepos, tool, allele_freq, coverage) %>% tally()
-AV_randomAF_counts$proportion = (AV_randomAF_counts$n / nrow(viral_golden))
-
-AV_randomAF_proportion = ggplot(AV_randomAF_counts, aes(x = log10(coverage), y = proportion, 
-                                                        group = tool, color = tool)) +
-  geom_point() +
-  geom_line() +
-  scale_color_manual(values = MyColors)
-print(AV_randomAF_proportion)
-ggsave("AllVarRandom_Proportion.png", AV_randomAF_proportion)
- 
-## Only looking at coverage between 100-1000
-AV_randomAF_truepos_f = filter(AV_randomAF_truepos, coverage > 99 & coverage < 1001)
-AV_randomAF_counts_f = group_by(AV_randomAF_truepos_f, tool, allele_freq, coverage) %>% tally()
-AV_randomAF_counts_f$proportion = (AV_randomAF_counts_f$n / nrow(viral_golden))
- 
-AV_randomAF_proportion_f = ggplot(AV_randomAF_counts_f, aes(x = log10(coverage), y = proportion, 
-                                                             group = tool, color = tool)) +
-  geom_point() +
-  geom_line() +
-  scale_color_manual(values = MyColors)
-print(AV_randomAF_proportion_f)
-ggsave("AllVarRandom_Proportion_Filtered.png", AV_randomAF_proportion_f)
-```
-
-#3.1 SetAF - Correlation Between Golden and Workflow
-```{r}
-## Only looking at true positives
-AV_Corr_setAF = ggplot(AV_setAF, aes(x = af_golden, y = af_workflow,
-                                                color = tool, shape = category)) +
-  geom_point() +
-  scale_color_manual(values = MyColors) +
-  geom_boxplot(aes(group = allele_freq)) + 
-  facet_grid(tool~coverage) +
-  ylim(-0.001,1.0) + xlim(-0.001,1.0)
-print(AV_Corr_setAF)
-ggsave("AllVarSet_Correlation.png",AV_Corr_setAF)
-
-##Looking at all SetAF Data
-AV_Corr_setAF = ggplot(AV_setAF, aes(x = af_golden, y = af_workflow, 
-                                       color = tool, group = tool, shape = category)) +
+#Looking at all SetAF Data
+AV_Corr_setAF <- 
+  ggplot(AV_setAF, aes(x = af_golden,y = af_workflow, color = category)) +
   geom_point(size = 3, alpha = 0.4) +
   scale_color_manual(values = MyColors) +
-  facet_grid(~coverage) +
+  facet_grid(coverage~tool) + 
   geom_smooth(method='lm', size = 1.5) +
-  ylim(-0.001,1.0) + xlim(-0.001,1.0)
+  theme(plot.title = element_text(hjust = 0.5))+ theme_minimal(base_size = 6)
 print(AV_Corr_setAF)
-ggsave("AllVarSet_Correlation_Filtered.png",AV_Corr_setAF)
+#ggsave(AV_Corr_setAF, file = "AllVarSet_Correlation_Filtered.png",
+#       path = "/Users/marissaknoll/Desktop/MAF/H1N1_Images")
 
-AV_Corr_setAF_Zoom = ggplot(AV_setAF, aes(x = af_golden, y = af_workflow,
-                                            color = tool, group = tool, shape = category)) +
-  geom_point(size = 3, alpha = 0.4) +
-  scale_color_manual(values = MyColors) +
-  facet_grid(~coverage) +
-  ylim(-0.01,0.15) + xlim(-0.01,0.15)
-print(AV_Corr_setAF_Zoom)
-ggsave("AllVarSet_CorrelationF_Filtered_Zoom.png", AV_Corr_setAF_Zoom)
 ```
 
-#3.2 RandomAF - Correlation Between Golden and Workflow
+##RandomAF - Correlation Between Golden and Workflow
 ```{r}
-## Only looking at true positives
-AV_Corr_randomAF = ggplot(AV_randomAF, aes(x = af_golden, y = af_workflow,
-                                                      color = tool, shape = category)) +
-  geom_point() +
-  scale_color_manual(values = MyColors) +
-  facet_grid(tool~coverage) +
-  ylim(-0.001,1.0) + xlim(-0.001,1.0)
-print(AV_Corr_randomAF)
-ggsave("AllVarRandom_Correlation.png",AV_Corr_randomAF)
-
 ##Looking at all RandomAF Data
-AV_Corr_randomAF = ggplot(AV_randomAF, aes(x = af_golden, y = af_workflow, 
-                                             color = tool, group = tool, shape = category)) +
+  AV_Corr_randomAF <- 
+  ggplot(AV_randomAF, aes(x = af_golden,y = af_workflow, color = category)) +
   geom_point(size = 3, alpha = 0.4) +
   scale_color_manual(values = MyColors) +
-  facet_grid(~coverage) +
+  facet_grid(coverage~tool) + 
   geom_smooth(method='lm', size = 1.5) +
-  ylim(-0.01,1) + xlim(-0.01,1)
+  theme(plot.title = element_text(hjust = 0.5))+ theme_minimal(base_size = 6)
 print(AV_Corr_randomAF)
-ggsave("AllVarRandom_Correlation_Filtered.png",AV_Corr_randomAF)
-
-AV_Corr_randomAF_Zoom = ggplot(AV_randomAF, aes(x = af_golden, y = af_workflow,
-                                                  color = tool, group = tool, shape = category)) +
-  geom_point(size = 3, alpha = 0.4) +
-  scale_color_manual(values = MyColors) +
-  facet_grid(~coverage) +
-  geom_smooth(method='lm', size = 1.5) +
-  ylim(-0.01,0.15) + xlim(-0.01,0.15)
-print(AV_Corr_randomAF_Zoom)
-ggsave("AllVarRandom_Correlation_Filtered_Zoom.png", AV_Corr_randomAF_Zoom)
+#ggsave("AllVarRandom_Correlation_Filtered.png",AV_Corr_randomAF,
+#       path = "/Users/marissaknoll/Desktop/MAF/H1N1_Images")
 ```
+
+
 
 ## Stats for SetAF Data
 ```{r}
+detach(package:plyr, unload=TRUE)
 coeff_var <- function(x) {
   CV <- sd(x) / mean(x) * 100
   return(CV)
 }
 
 AV_setAF_split = group_by(AV_setAF_truepos, tool, allele_freq, coverage) %>%
-  summarize(mean(af_workflow), sd(af_workflow), coeff_var(af_workflow)) %>% droplevels()
-colnames(AV_setAF_split) = c("tool","AF","cov","mean","sd","variance")
-
-Mean_setAF = ggplot(AV_setAF_split, aes(x = tool, y = mean, color = cov)) + 
+  summarize(mean = mean(af_workflow), sd = sd(af_workflow), variance = coeff_var(af_workflow)) %>% droplevels()
+Mean_setAF = ggplot(AV_setAF_split, aes(x = coverage, y = mean, color = allele_freq)) + 
   geom_point() +
-  facet_grid(rows = vars(tool), cols = vars(AF)) +
+  #facet_grid(cols = vars(allele_freq)) +
   theme(text = element_text(size = 15),
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 print(Mean_setAF)
-ggsave("SetAF_Mean_AlleleFrequency.png",Mean_setAF)
-
-CoeffVar_setAF = ggplot(AV_setAF_split, aes(x = tool, y = variance, color = cov)) + 
+#ggsave("SetAF_Mean_AlleleFrequency.png",Mean_setAF,
+#       path = "/Users/marissaknoll/Desktop/MAF/H1N1_Images")
+#visulize the effect of downsampling. 
+CoeffVar_setAF = ggplot(AV_setAF_split, aes(x = coverage, y = variance, color = allele_freq)) + 
   geom_point() +
-  facet_grid(rows = vars(tool), cols = vars(AF)) +
+  #facet_grid(cols = vars(allele_freq)) +
   theme(text = element_text(size = 15),
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 print(CoeffVar_setAF)
-ggsave("SetAF_CoeffVar_AlleleFrequency.png",CoeffVar_setAF)
+#ggsave("SetAF_CoeffVar_AlleleFrequency.png",CoeffVar_setAF,
+#       path = "/Users/marissaknoll/Desktop/MAF/H1N1_Images")
+#variances above 10000 are simliar
+
 ```
-
-
-## Set Up for Stats for RandomAF Data
+## Stats for RandomAF Data
 ```{r}
 AV_randomAF_split = group_by(AV_randomAF_truepos, tool, coverage) %>%
-  summarize(mean(af_workflow), sd(af_workflow), coeff_var(af_workflow)) %>% droplevels()
-colnames(AV_randomAF_split) = c("tool","cov","mean","sd","variance")
+  summarize(mean = mean(af_workflow), sd = sd(af_workflow), variance = coeff_var(af_workflow)) %>% droplevels()
 
-Mean_randomAF = ggplot(AV_randomAF_split, aes(x = tool, y = mean, color = cov)) + 
-  geom_point()
+Mean_randomAF = ggplot(AV_randomAF_split, aes(x = coverage, y = mean, color = tool)) + 
+  geom_point() +
   theme(text = element_text(size = 15),
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 print(Mean_randomAF)
-ggsave("RandomAF_Mean_AlleleFrequency.png",Mean_randomAF)
+#ggsave("RandomAF_Mean_AlleleFrequency.png",Mean_randomAF,
+#       path = "/Users/marissaknoll/Desktop/MAF/H1N1_Images")
 
-CoeffVar_randomAF = ggplot(AV_randomAF_split, aes(x = tool, y = variance, color = cov)) + 
+CoeffVar_randomAF = ggplot(AV_randomAF_split, aes(x = coverage, y = variance, color = tool)) + 
   geom_point() +
   theme(text = element_text(size = 15),
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 print(CoeffVar_randomAF)
-ggsave("RandomAF_CoeffVar_AlleleFrequency.png",CoeffVar_randomAF)
+#ggsave("RandomAF_CoeffVar_AlleleFrequency.png",CoeffVar_randomAF,
+#       path = "/Users/marissaknoll/Desktop/MAF/H1N1_Images")
 ```
 
-#4. Look at how each tool compares at each AF and seq-depth
 ```{r}
-AVSet_Corr = ggplot(AV_setAF_truepos, aes(x = tool, y = af_workflow)) + 
+ggplot(AV_setAF, aes(x = log10(dp), y = af_workflow, color = tool)) +
   geom_point() +
-  geom_boxplot() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-  facet_grid(allele_freq~coverage, scales = "free_y")
-print(AVSet_Corr)
-ggsave("AllVarSet_Tool_Comparison.pdf", AVSet_Corr, width = 15, height = 20)
-# y axes are set per row at the moment (scales = "free_y")
+  facet_grid(rows = vars(coverage), cols = vars(allele_freq)) +
+  xlim(0,6)
 
-AVRandom_Corr = ggplot(AV_randomAF_truepos, aes(x = tool, y = af_workflow)) + 
-  geom_point() +
-  geom_violin() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-  facet_grid(allele_freq~coverage)
-print(AVRandom_Corr)
-ggsave("AllVarRandom_Tool_Comparison.pdf", AVRandom_Corr, width = 15, height = 20)
-```
+# do this with all bamfiles, not just variants
+ggplot(AV_setAF, aes(x = log10(dp), fill = tool)) +
+  geom_histogram()+
+  facet_grid(rows = vars(coverage), cols = vars(allele_freq))
 
-#5.1. Looks at where the SNPS are located throughout the genome
-```{r}
-# Set AF Data
-AV_Pos = ggplot(AV_setAF_truepos, aes(x = pos, y = af_workflow)) +
-  geom_point()
-print(AV_Pos)
-AV_Pos_falsepos = ggplot(AV_setAF_falsepos, aes(x = pos, y = af_workflow)) +
-  geom_point()
-print(AV_Pos_falsepos)
-AV_Pos_falseneg = ggplot(AV_setAF_falseneg, aes(x = pos, y = af_workflow)) +
-  geom_point()
-print(AV_Pos_falseneg)
-
-# Random AF Data
-AV_Pos_r = ggplot(AV_randomAF_truepos, aes(x = pos, y = af_workflow)) +
-  geom_point()
-print(AV_Pos_r)
-AV_Pos_falsepos_r = ggplot(AV_randomAF_falsepos, aes(x = pos, y = af_workflow)) +
-  geom_point()
-print(AV_Pos_falsepos_r)
-AV_Pos_falseneg_r = ggplot(AV_randomAF_falseneg, aes(x = pos, y = af_workflow)) +
-  geom_point()
-print(AV_Pos_falseneg_r)
-```
-
-#5.2.Transitions/Transversions
-```{r}
-setAF_TP_pos = ggplot(AV_setAF_truepos, aes(x = pos, y = ref, color = tool, shape = alt)) +
-  geom_point()
-print(setAF_TP_pos)
-
-TsTv(AV_setAF_truepos)
-#counts variants from all tools/seq_depth/AF trials
-
-randomAF_TP_pos = ggplot(AV_randomAF_truepos, aes(x = pos, y = ref, color = tool, shape = alt)) +
-  geom_point()
-print(randomAF_TP_pos)
-
-TsTv(AV_randomAF_truepos)
 ```
