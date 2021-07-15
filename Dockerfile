@@ -32,8 +32,7 @@ RUN mkdir -p ${APPS_ROOT}
 
 ###############################################
 # R packages
-RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown','tinytex'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
-RUN R -e "tinytex::install_tinytex()"
+RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
 
 ###############################################
 #BWA = 'bwa/intel/0.7.17'
@@ -43,7 +42,7 @@ ENV BWA_VERSION 0.7.17
 ENV BWA_HOME ${APPS_ROOT}/bwa/${BWA_VERSION}
 ENV PATH ${BWA_HOME}:${PATH}
 
-RUN git clone --branch v${BWA_VERSION} https://github.com/lh3/bwa.git ${BWA_HOME} \
+RUN git clone --depth 1 --branch v${BWA_VERSION} https://github.com/lh3/bwa.git ${BWA_HOME} \
   && make -C ${BWA_HOME}
 
 ###############################################
@@ -139,11 +138,11 @@ ENV SNPEFF_HOME ${APPS_ROOT}/snpeff/${SNPEFF_VERSION}
 ENV SNPEFF_JAR ${SNPEFF_HOME}/snpEff.jar
 ENV SNPSIFT_JAR ${SNPEFF_HOME}/SnpSift.jar
 
-RUN wget -O snpEff_v${SNPEFF_VERSION}_core.zip  https://sourceforge.net/projects/snpeff/files/snpEff_v${SNPEFF_VERSION}_core.zip/download# \
+RUN wget -O snpEff_v${SNPEFF_VERSION}_core.zip  https://sourceforge.net/projects/snpeff/files/snpEff_v${SNPEFF_VERSION}_core.zip/download \
   && mkdir ${APPS_ROOT}/snpeff \
   && unzip snpEff_v${SNPEFF_VERSION}_core.zip \
   && mv snpEff ${APPS_ROOT}/snpeff/${SNPEFF_VERSION} \
-	&& rm snpEff_v${SNPEFF_VERSION}_core.zip
+  && rm snpEff_v${SNPEFF_VERSION}_core.zip
 				
 ###############################################
 #TRIMMOMATIC = 'trimmomatic/0.36'
@@ -156,7 +155,7 @@ RUN wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmoma
   && unzip Trimmomatic-${TRIMMOMATIC_VERSION}.zip \
   && mkdir -p ${APPS_ROOT}/trimmomatic \
   && mv Trimmomatic-${TRIMMOMATIC_VERSION} ${TRIMMOMATIC_HOME} \
-	&& rm Trimmomatic-${TRIMMOMATIC_VERSION}.zip
+  && rm Trimmomatic-${TRIMMOMATIC_VERSION}.zip
 	
 ###############################################
 #PYPAIRIX = 'pypairix/intel/0.2.4'
@@ -165,7 +164,7 @@ ENV PAIRIX_VERSION 0.2.4
 ENV PAIRIX_HOME ${APPS_ROOT}/pairix/${PAIRIX_VERSION}
 ENV PATH ${PAIRIX_HOME}/bin:${PAIRIX_HOME}/util:${PAIRIX_HOME}/util/bam2pairs:${PATH}
 
-RUN git clone https://github.com/4dn-dcic/pairix --branch ${PAIRIX_VERSION} ${PAIRIX_HOME} \
+RUN git clone --depth 1 https://github.com/4dn-dcic/pairix --branch ${PAIRIX_VERSION} ${PAIRIX_HOME} \
   && make -C ${PAIRIX_HOME}
 
 ###############################################
@@ -174,7 +173,7 @@ RUN git clone https://github.com/4dn-dcic/pairix --branch ${PAIRIX_VERSION} ${PA
 ENV JVARKIT_HOME ${APPS_ROOT}/jvarkit
 ENV JVARKIT_DIST ${JVARKIT_HOME}/dist
 
-RUN git clone "https://github.com/lindenb/jvarkit.git" ${JVARKIT_HOME}
+RUN git clone --depth 1 "https://github.com/lindenb/jvarkit.git" ${JVARKIT_HOME}
 
 RUN $JVARKIT_HOME/gradlew --project-dir $JVARKIT_HOME sortsamrefname
 ENV SORTSAMREFNAME_JAR ${JVARKIT_DIST}/sortsamrefname.jar
@@ -190,7 +189,7 @@ ENV PILON_HOME ${APPS_ROOT}/pilon/${PILON_VERSION}
 ENV PILON_JAR ${PILON_HOME}/pilon.jar
 
 RUN mkdir -p ${PILON_HOME} \
- && wget https://github.com/broadinstitute/pilon/releases/download/v${PILON_VERSION}/pilon-${PILON_VERSION}.jar -O ${PILON_HOME}/pilon.jar
+  && wget https://github.com/broadinstitute/pilon/releases/download/v${PILON_VERSION}/pilon-${PILON_VERSION}.jar -O ${PILON_HOME}/pilon.jar
 
 ###############################################
 #BCFTOOLS = 'bcftools/intel/1.9'
@@ -202,7 +201,7 @@ ENV PATH ${BCFTOOLS_HOME}:${PATH}
 ENV MANPATH ${BCFTOOLS_HOME}/share/man:${MANPATH}
 ENV LD_LIBRARY_PATH ${BCFTOOLS_HOME}/lib:${LD_LIBRARY_PATH}
 
-RUN git clone git://github.com/samtools/bcftools.git --branch ${BCFTOOLS_VERSION} ${BCFTOOLS_HOME} \
+RUN git clone --depth 1 git://github.com/samtools/bcftools.git --branch ${BCFTOOLS_VERSION} ${BCFTOOLS_HOME} \
   && cd ${BCFTOOLS_HOME} \
   && autoheader && autoconf && ./configure --with-htslib=${HTSLIB_HOME} \
   && make -j
@@ -228,7 +227,7 @@ ENV SEQTK_VERSION 1.2
 ENV SEQTK_HOME ${APPS_ROOT}/seqtk/${SEQTK_VERSION}
 ENV PATH ${SEQTK_HOME}:${PATH}
 
-RUN git clone https://github.com/lh3/seqtk.git --branch v${SEQTK_VERSION} ${SEQTK_HOME} \
+RUN git clone --depth 1 https://github.com/lh3/seqtk.git --branch v${SEQTK_VERSION} ${SEQTK_HOME} \
   && make -C ${SEQTK_HOME}
 
 ###############################################
@@ -238,7 +237,7 @@ ENV FREEBAYES_VERSION 1.1.0
 ENV FREEBAYES_HOME ${APPS_ROOT}/freebayes/${FREEBAYES_VERSION}
 ENV PATH ${FREEBAYES_HOME}/bin:${PATH}
 
-RUN git clone --branch v${FREEBAYES_VERSION} --recursive git://github.com/ekg/freebayes.git ${FREEBAYES_HOME} \
+RUN git clone --depth 1 --branch v${FREEBAYES_VERSION} --recursive git://github.com/ekg/freebayes.git ${FREEBAYES_HOME} \
   && make -C ${FREEBAYES_HOME}
   
 ###############################################
@@ -260,13 +259,13 @@ ENV IVAR_HOME ${APPS_ROOT}/ivar/${IVAR_VERSION}
 
 RUN yum -y install centos-release-scl \
   && yum -y install devtoolset-8-gcc devtoolset-8-gcc-c++ \
-  && git clone https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION} ${IVAR_HOME} \
-	&& cd ${IVAR_HOME} \
+  && git clone --depth 1 https://github.com/andersen-lab/ivar.git --branch v${IVAR_VERSION} ${IVAR_HOME} \
+  && cd ${IVAR_HOME} \
   && ./autogen.sh \
   && ./configure --with-hts=${HTSLIB_HOME} \
   && scl enable devtoolset-8 -- make -j \
   && scl enable devtoolset-8 -- make install \
-	&& cd /
+  && cd /
 
 ###############################################
 #NEATGENREADS = 'neat-genreads/v2'
@@ -278,7 +277,7 @@ ENV NEATGENREADS_HOME ${APPS_ROOT}/neat-genreads/${NEATGENREADS_VERSION}
 RUN yum install -y python2-pip \
   && pip2 install --upgrade pip==20.3.1 \
   && pip2 install numpy==1.16.6 \
-  && git clone --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
+  && git clone --depth 1 --branch v${NEATGENREADS_VERSION} https://github.com/zstephens/neat-genreads.git ${NEATGENREADS_HOME} \
   && echo 'alias genReads.py="python2 ${NEATGENREADS_HOME}/genReads.py"' >> /etc/profile.d/neatgen.sh \
   && echo 'alias mergeJobs.py="python2 ${NEATGENREADS_HOME}/mergeJobs.py"' >> /etc/profile.d/neatgen.sh \
   && echo 'alias computeFraglen.py="python2 ${NEATGENREADS_HOME}/utilities/computeFraglen.py"' >> /etc/profile.d/neatgen.sh \
@@ -292,20 +291,53 @@ RUN yum install -y python2-pip \
 
 ###############################################
 #CONDA + 
-#biopython==1.72 deeptools==3.3.1 pysam==0.14.1
+#biopython==1.72 deeptools==3.3.1 pysam==0.14.1 pyfaidx==0.5.9.1
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
   && bash ~/miniconda.sh -b -p ${APPS_ROOT}/miniconda \
   && eval "$(${APPS_ROOT}/miniconda/bin/conda shell.bash hook)" \
   && conda config --add channels defaults \
   && conda config --add channels bioconda \
   && conda config --add channels conda-forge \
-	&& conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6 \
-	&& echo '. ${APPS_ROOT}/miniconda/etc/profile.d/conda.sh' >> /etc/profile.d/miniconda.sh
+  && conda install biopython==1.72 deeptools==3.3.1 pysam==0.14.1 python==3.6 pyfaidx==0.5.9.1 \
+  && echo '. ${APPS_ROOT}/miniconda/etc/profile.d/conda.sh' >> /etc/profile.d/miniconda.sh
 		
 ###############################################
 #PYSAM = pysam/intel/0.10.0
 
-RUN pip2 install pysam==0.10.0
-
-
+RUN pip2 install pysam==0.10.0 numpy scipy argparse
 RUN echo 'conda activate base' >> /etc/profile.d/miniconda.sh
+
+###############################################
+#lofreq_star/2.1.3.1
+
+ENV LOFREQ_STAR_VERSION 2.1.3.1
+ENV LOFREQ_STAR_HOME ${APPS_ROOT}/lofreq_star/${LOFREQ_STAR_VERSION}
+ENV PATH ${PATH}:${LOFREQ_STAR_HOME}/bin
+
+RUN wget https://github.com/CSB5/lofreq/raw/master/dist/lofreq_star-${LOFREQ_STAR_VERSION}_linux-x86-64.tgz \
+  && tar -zxvf lofreq_star-${LOFREQ_STAR_VERSION}_linux-x86-64.tgz \
+	&& mkdir -p ${LOFREQ_STAR_HOME} \
+	&& mv ./lofreq_star-2.1.3.1/bin  ${LOFREQ_STAR_HOME}/ 
+	
+ENV PATH ${PATH}:${APPS_ROOT}/miniconda/bin/
+
+RUN yum install -y libxml2-devel NLopt* pandoc
+
+	
+RUN R -e "install.packages(c('ggplot2','plyr','tidyverse','ggpubr','MLmetrics','plotrix','rmarkdown'), repos = 'http://cran.us.r-project.org')"
+RUN R -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
+RUN R -e "require(devtools); install_version('tidyr', version = '1.0.0', repos = 'http://cran.us.r-project.org')"
+RUN R -e "require(devtools); install_version('forcats', version = '0.4.0', repos = 'http://cran.us.r-project.org')"
+RUN R -e "require(devtools); install_version('readr', version = '1.3.1', repos = 'http://cran.us.r-project.org')"
+RUN R -e "require(devtools); install_version('plyr', version = '1.8.5', repos = 'http://cran.us.r-project.org')"
+RUN R -e "require(devtools); install_version('purrr', version = '0.3.3', repos = 'http://cran.us.r-project.org')"
+
+RUN mkdir ${APP_ROOT}/scripts
+ADD bin/analyze_af_report.Rmd ${APPS_ROOT}/scripts/analyze_af_report.Rmd
+
+#RUN R -e "require(devtools); install_version('ggplot2', version = '3.2.1', repos = 'http://cran.us.r-project.org')"
+#RUN R -e "require(devtools); install_version('jsonlite', version = '1.6', repos = 'http://cran.us.r-project.org')"
+#RUN R -e "require(devtools); install_version('tidyverse', version = '1.2.1', repos = 'http://cran.us.r-project.org')"
+
+RUN R -e "install.packages(c('tinytex'), repos = 'http://cran.us.r-project.org', Ncpus = 6)"
+RUN R -e "tinytex::install_tinytex()"
