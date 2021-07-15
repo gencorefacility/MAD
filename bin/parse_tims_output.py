@@ -16,8 +16,14 @@ out = "{}.vcf".format(sample_id)
 
 with open(out, 'w') as vcf:
 	vcf.write("##fileformat=VCFv4.2\n")
+	vcf.write("##source=timo\n")
+	vcf.write('##INFO=<ID=AF,Number=A,Type=Float,Description="Estimated allele frequency in the range (0,1]">\n')
 	vcf.write('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n')
+	vcf.write('##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Number of observation for each allele">\n')
+	vcf.write('##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">\n')
+	vcf.write('##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype Quality, the Phred-scaled marginal (or unconditional) probability of the called genotype">\n')
 	vcf.write("##reference=file://{}\n".format(fa))
+
 	vcf.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tsample\n")
 	for chrom in contigs.keys():
 		csv = glob.glob("FILES/fullvarlist/filtered.STRAIN.{}.*.snplist.csv".format(chrom))[0]
