@@ -38,8 +38,8 @@ def main():
 		#print(data)
 		results.append({
 			'sample_id': sample_id, 
-                        'chrom': x[0],
-                        'pos': x[1], 
+			'chrom': x[0],
+			'pos': x[1], 
 			'af_golden': data['af'], 
 			'af_workflow': 0, 
 			'ref': data['ref'], 
@@ -51,8 +51,8 @@ def main():
 		data = get_data_workflow(vcf_workflow, x)
 		results.append({
 			'sample_id': sample_id, 
-                        'chrom': x[0],
-                        'pos': x[1], 
+			'chrom': x[0],
+			'pos': x[1], 
 			'af_golden': 0, 
 			'af_workflow': data['af'], 
 			'ref': data['ref'], 
@@ -65,8 +65,8 @@ def main():
 		workflow_data = get_data_workflow(vcf_workflow, x)
 		results.append({
 			'sample_id': sample_id, 
-		        'chrom': x[0],	
-                        'pos': x[1], 
+			'chrom': x[0],	
+			'pos': x[1], 
 			'af_golden': gold_data['af'], 
 			'af_workflow': workflow_data['af'], 
 			'ref': workflow_data['ref'], 
@@ -108,13 +108,17 @@ def get_data_workflow(vcf, x):
 
 	# Get AF directly from INFO AF field for some tools if possible
 	# Else, compute using AD/DP
-	use_af_tool_list = ['varscan', 'ivar', 'tim', 'cliquesnv.vcf', 'lofreq.vcf']
+	use_af_tool_list = ['ivar', 'tim', 'cliquesnv.vcf', 'lofreq.vcf']
 	if any(x in vcf.filename.decode() for x in use_af_tool_list):
 		info_af = var.info["AF"]
 		if type(info_af) is tuple:
 			af_workflow = round(float(var.info["AF"][0]),2)
 		elif type(info_af) in [float, str]:
 			af_workflow = round(float(var.info["AF"]),2)
+	elif 'varscan' in vcf.filename.decode():
+		for sample in var.samples:
+                        freq = var.samples[sample]['FREQ']
+                        af_workflow = float(freq.replace('%',''))/100
 	else:
 		for sample in var.samples:
 			ad = var.samples[sample]['AD']
